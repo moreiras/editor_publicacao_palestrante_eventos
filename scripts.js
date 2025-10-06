@@ -117,27 +117,62 @@
   }
 
   async function loadImage(url) {
+    let finalUrl = url;
+    let objectUrl = null;
+    let shouldRequestCors = false;
+
+    try {
+      const resolvedUrl = new URL(url, window.location.href);
+      finalUrl = resolvedUrl.href;
+      const isDataUrl = resolvedUrl.protocol === 'data:';
+      const isFileUrl = resolvedUrl.protocol === 'file:';
+      const sameOrigin = resolvedUrl.origin === window.location.origin;
+
+      shouldRequestCors = !isDataUrl && !isFileUrl && !sameOrigin;
+    } catch (error) {
+      // Mantém a URL original caso não seja possível resolvê-la (ex.: caminhos relativos não padrão)
+      finalUrl = url;
+    }
+
+    if (shouldRequestCors) {
+      try {
+        const response = await fetch(finalUrl, { mode: 'cors' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+        finalUrl = objectUrl;
+        shouldRequestCors = false;
+      } catch (error) {
+        console.warn('Falha ao buscar a imagem com CORS. O fundo será omitido para permitir a exportação.', error);
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+        throw error;
+      }
+    }
+
     return new Promise((resolve, reject) => {
       const image = new Image();
-      let finalUrl = url;
-
-      try {
-        const resolvedUrl = new URL(url, window.location.href);
-        finalUrl = resolvedUrl.href;
-        const isDataUrl = resolvedUrl.protocol === 'data:';
-        const isFileUrl = resolvedUrl.protocol === 'file:';
-        const sameOrigin = resolvedUrl.origin === window.location.origin;
-
-        if (!isDataUrl && !isFileUrl && !sameOrigin) {
-          image.crossOrigin = 'anonymous';
-        }
-      } catch (error) {
-        // Mantém a URL original caso não seja possível resolvê-la (ex.: caminhos relativos não padrão)
-        finalUrl = url;
+      if (shouldRequestCors) {
+        image.crossOrigin = 'anonymous';
       }
 
-      image.onload = () => resolve(image);
-      image.onerror = reject;
+      image.onload = () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+        resolve(image);
+      };
+      image.onerror = (error) => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+        reject(error);
+      };
+
       image.src = finalUrl;
     });
   }
