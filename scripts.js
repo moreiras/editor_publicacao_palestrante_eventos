@@ -1,6 +1,20 @@
 (function () {
   'use strict';
 
+  /**
+   * Busca um elemento pelo ID e lança um erro descritivo caso não exista.
+   * Ajuda a detectar imediatamente mudanças no HTML que quebrem o JavaScript.
+   * @param {string} id
+   * @returns {HTMLElement}
+   */
+  function requireElement(id) {
+    const element = document.getElementById(id);
+    if (!element) {
+      throw new Error(`Elemento com id "${id}" não encontrado no DOM.`);
+    }
+    return element;
+  }
+
   const { THEME, TEXT_TEMPLATE } = window;
   if (!THEME || !TEXT_TEMPLATE) {
     throw new Error('Tema ou template de texto não definidos. Verifique theme.js.');
@@ -20,40 +34,51 @@
   };
 
   const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
-  const canvas = document.getElementById('preview');
+  const canvas = requireElement('preview');
   const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Contexto 2D não disponível. O navegador é incompatível com canvas.');
+  }
 
-  const inpNome = document.getElementById('inpNome');
-  const inpCargo = document.getElementById('inpCargo');
-  const inpEmpresa = document.getElementById('inpEmpresa');
-  const inpTitulo = document.getElementById('inpTitulo');
-  const inpData = document.getElementById('inpData');
-  const inpHorario = document.getElementById('inpHorario');
-  const inpSocial = document.getElementById('inpSocial');
+  const inpNome = requireElement('inpNome');
+  const inpCargo = requireElement('inpCargo');
+  const inpEmpresa = requireElement('inpEmpresa');
+  const inpTitulo = requireElement('inpTitulo');
+  const inpData = requireElement('inpData');
+  const inpHorario = requireElement('inpHorario');
+  const inpSocial = requireElement('inpSocial');
 
-  const inpFoto = document.getElementById('inpFoto');
-  const cropImg = document.getElementById('cropImg');
+  const inpFoto = requireElement('inpFoto');
+  const cropImg = requireElement('cropImg');
 
-  const rangeBrilho = document.getElementById('rangeBrilho');
-  const rangeContraste = document.getElementById('rangeContraste');
-  const rangeSaturacao = document.getElementById('rangeSaturacao');
+  const rangeBrilho = requireElement('rangeBrilho');
+  const rangeContraste = requireElement('rangeContraste');
+  const rangeSaturacao = requireElement('rangeSaturacao');
 
-  const btnZoomIn = document.getElementById('btnZoomIn');
-  const btnZoomOut = document.getElementById('btnZoomOut');
-  const btnRotate = document.getElementById('btnRotate');
-  const btnReset = document.getElementById('btnReset');
+  const btnZoomIn = requireElement('btnZoomIn');
+  const btnZoomOut = requireElement('btnZoomOut');
+  const btnRotate = requireElement('btnRotate');
+  const btnReset = requireElement('btnReset');
 
-  const btnExport = document.getElementById('btnExport');
-  const btnShare = document.getElementById('btnShare');
+  const btnExport = requireElement('btnExport');
+  const btnShare = requireElement('btnShare');
 
-  const outTexto = document.getElementById('outTexto');
+  const outTexto = requireElement('outTexto');
 
   let cropper = null;
 
+  /**
+   * Configura o estilo da fonte no contexto do canvas de acordo com o peso e
+   * o tamanho desejado, ajustando automaticamente para o devicePixelRatio.
+   */
   function setFont(weight, sizePx) {
     ctx.font = `${weight} ${Math.round(sizePx * dpr)}px ${fontFamily}`;
   }
 
+  /**
+   * Faz a quebra manual de texto respeitando o limite de largura do canvas.
+   * Retorna a coordenada Y da próxima linha disponível.
+   */
   function wrapText(ctxInstance, text, x, y, maxWidth, lineHeight, maxLines = 3) {
     const words = (text || '').split(/\s+/);
     let line = '';
@@ -82,11 +107,17 @@
 
   const addTextGap = (value) => value + lineSpacing;
 
+  /**
+   * Lê o valor dos sliders de ajuste fotográfico garantindo número válido.
+   */
   function readRangeValue(rangeEl, fallback = 100) {
     const value = Number.parseFloat(rangeEl?.value);
     return Number.isFinite(value) ? value : fallback;
   }
 
+  /**
+   * Constrói a string de filtros CSS aplicada às imagens do canvas.
+   */
   function cssFilters() {
     const brilho = readRangeValue(rangeBrilho, 100);
     const contraste = readRangeValue(rangeContraste, 100);
@@ -94,6 +125,10 @@
     return `brightness(${brilho}%) contrast(${contraste}%) saturate(${saturacao}%)`;
   }
 
+  /**
+   * Recorta uma imagem quadrada temporária e aplica filtros para preservar a
+   * qualidade antes de desenhá-la no canvas principal.
+   */
   function drawSquareWithFilters(img, sizePx, filters) {
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = sizePx;
@@ -124,10 +159,15 @@
     return tempCanvas;
   }
 
+  /**
+   * Carrega imagens garantindo suporte a CORS quando necessário.
+   * Retorna uma instância de Image pronta para uso no canvas.
+   */
   async function loadImage(url) {
     let finalUrl = url;
     let objectUrl = null;
     let shouldRequestCors = false;
+    let shouldForceBlob = false;
 
     try {
       const resolvedUrl = new URL(url, window.location.href);
@@ -135,10 +175,18 @@
       const isDataUrl = resolvedUrl.protocol === 'data:';
       const isFileUrl = resolvedUrl.protocol === 'file:';
       const sameOrigin = resolvedUrl.origin === window.location.origin;
+      const runningFromFile = window.location.protocol === 'file:';
+
+      if (!isDataUrl) {
+        // Quando rodamos localmente (file://) o canvas é contaminado se desenharmos
+        // a imagem direto. Para contornar isso, convertemos para Blob e usamos
+        // um ObjectURL, que mantém a exportação habilitada.
+        shouldForceBlob = isFileUrl || runningFromFile;
+      }
 
       shouldRequestCors = !isDataUrl && !isFileUrl && !sameOrigin;
     } catch (error) {
-      // Mantém a URL original caso não seja possível resolvê-la (ex.: caminhos relativos não padrão)
+      // Mantém a URL original caso não seja possível resolvê-la (ex.: caminhos relativos não padrão).
       finalUrl = url;
     }
 
@@ -151,14 +199,67 @@
         const blob = await response.blob();
         objectUrl = URL.createObjectURL(blob);
         finalUrl = objectUrl;
-        shouldRequestCors = false;
       } catch (error) {
-        console.warn('Falha ao buscar a imagem com CORS. O fundo será omitido para permitir a exportação.', error);
+        if (shouldForceBlob && window.location.protocol === 'file:') {
+          try {
+            const blob = await new Promise((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              xhr.open('GET', finalUrl);
+              xhr.responseType = 'blob';
+              xhr.onload = () => {
+                if (xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
+                  resolve(xhr.response);
+                } else {
+                  reject(new Error(`XHR HTTP ${xhr.status}`));
+                }
+              };
+              xhr.onerror = () => reject(new Error('XHR request failed'));
+              xhr.send();
+            });
+            objectUrl = URL.createObjectURL(blob);
+            finalUrl = objectUrl;
+          } catch (xhrError) {
+            console.warn('Falha ao carregar imagem local para exportação.', xhrError);
+            if (objectUrl) {
+              URL.revokeObjectURL(objectUrl);
+              objectUrl = null;
+            }
+            throw xhrError;
+          }
+        } else {
+          console.warn('Falha ao buscar a imagem com CORS. O fundo será omitido para permitir a exportação.', error);
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+          }
+          throw error;
+        }
+      }
+    } else if (shouldForceBlob) {
+      try {
+        const blob = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', finalUrl);
+          xhr.responseType = 'blob';
+          xhr.onload = () => {
+            if (xhr.status === 0 || (xhr.status >= 200 && xhr.status < 300)) {
+              resolve(xhr.response);
+            } else {
+              reject(new Error(`XHR HTTP ${xhr.status}`));
+            }
+          };
+          xhr.onerror = () => reject(new Error('XHR request failed'));
+          xhr.send();
+        });
+        objectUrl = URL.createObjectURL(blob);
+        finalUrl = objectUrl;
+      } catch (xhrError) {
+        console.warn('Falha ao carregar imagem local para exportação.', xhrError);
         if (objectUrl) {
           URL.revokeObjectURL(objectUrl);
           objectUrl = null;
         }
-        throw error;
+        throw xhrError;
       }
     }
 
@@ -183,6 +284,9 @@
     });
   }
 
+  /**
+   * Aplica os valores dos campos ao template textual definido no tema.
+   */
   function renderTemplate(tpl, data) {
     return tpl
       .replace(/{{evento}}/g, data.evento || '')
@@ -193,6 +297,9 @@
       .replace(/{{hashtags}}/g, data.hashtags || '');
   }
 
+  /**
+   * Gera o texto auxiliar para redes sociais com base nos campos do formulário.
+   */
   function atualizarTexto() {
     const payload = {
       evento: THEME.name,
@@ -205,6 +312,9 @@
     outTexto.value = renderTemplate(TEXT_TEMPLATE, payload);
   }
 
+  /**
+   * Define o formato padrão da arte (4:5 usado em redes sociais verticais).
+   */
   function getFormatPx() {
     return { w: 1080, h: 1350 };
   }
@@ -214,6 +324,10 @@
 
   const blockedBgUrls = new Set();
 
+  /**
+   * Busca e cacheia a imagem de fundo definida no tema, bloqueando URLs
+   * problemáticas para evitar repetição de erros.
+   */
   async function getBackgroundImage(url) {
     if (!url) return null;
     if (blockedBgUrls.has(url)) {
@@ -236,6 +350,10 @@
     }
   }
 
+  /**
+   * Determina se o canvas está "contaminado" por operações sem CORS.
+   * Caso esteja, o navegador impede exportação/compartilhamento da imagem.
+   */
   function canvasIsExportable(context) {
     try {
       // A leitura de qualquer pixel dispara SecurityError quando o canvas está contaminado.
@@ -246,6 +364,10 @@
     }
   }
 
+  /**
+   * Renderiza todo o layout no canvas considerando DPI, filtros de imagem e
+   * configurações do tema.
+   */
   async function redraw() {
     const { w, h } = getFormatPx();
     const W = Math.round(w * dpr);
@@ -400,6 +522,10 @@
 
   }
 
+  /**
+   * Simples utilitário para evitar redesenhos constantes em sequência.
+   * Mantém a UI responsiva mesmo com eventos de input intensos.
+   */
   function throttle(fn, limit = 33) {
     let ticking = false;
     let lastArgs = null;
@@ -419,11 +545,11 @@
     };
   }
 
-  const requestRedraw = throttle(() => {
-    redraw();
-  }, 33);
+  const requestRedraw = throttle(redraw, 33);
 
   let currentObjectUrl = null;
+
+  // --- Interações com upload/crop da foto ---
 
   inpFoto.addEventListener('change', (ev) => {
     const file = ev.target.files?.[0];
@@ -472,10 +598,12 @@
     cropImg.src = url;
   });
 
+  // Ajustes finos da imagem (brilho/contraste/saturação) disparam redesenho.
   [rangeBrilho, rangeContraste, rangeSaturacao].forEach((el) => {
     el.addEventListener('input', requestRedraw);
   });
 
+  // Controles de manipulação do Cropper.js.
   btnZoomIn.addEventListener('click', () => {
     cropper?.zoom(0.1);
     requestRedraw();
@@ -496,17 +624,19 @@
     requestRedraw();
   });
 
-  [inpNome, inpCargo, inpEmpresa, inpTitulo, inpData, inpHorario, inpSocial].forEach((el) => {
-    el.addEventListener('input', () => {
+  const textInputs = [inpNome, inpCargo, inpEmpresa, inpTitulo, inpData, inpHorario, inpSocial];
+  textInputs.forEach((el) => {
+    const handleUpdate = () => {
       atualizarTexto();
       requestRedraw();
-    });
-    el.addEventListener('change', () => {
-      atualizarTexto();
-      requestRedraw();
-    });
+    };
+    el.addEventListener('input', handleUpdate);
+    el.addEventListener('change', handleUpdate);
   });
 
+  /**
+   * Converte o canvas para Blob, validando se ele está elegível para exportação.
+   */
   function canvasToBlob(c) {
     return new Promise((resolve, reject) => {
       if (!c) {
@@ -532,6 +662,7 @@
     });
   }
 
+  // Exporta a imagem em PNG para download local.
   btnExport.addEventListener('click', async () => {
     try {
       const blob = await canvasToBlob(canvas);
@@ -558,6 +689,7 @@
     }
   });
 
+  // Compartilha o post via Web Share API quando disponível.
   btnShare.addEventListener('click', async () => {
     try {
       const blob = await canvasToBlob(canvas);
@@ -582,6 +714,7 @@
     }
   });
 
+  // Estado inicial da aplicação.
   atualizarTexto();
   redraw();
 })();
