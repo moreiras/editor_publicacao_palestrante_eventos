@@ -178,10 +178,15 @@
       const runningFromFile = window.location.protocol === 'file:';
 
       if (!isDataUrl) {
-        // Quando rodamos localmente (file://) o canvas é contaminado se desenharmos
-        // a imagem direto. Para contornar isso, convertemos para Blob e usamos
-        // um ObjectURL, que mantém a exportação habilitada.
-        shouldForceBlob = isFileUrl || runningFromFile;
+        if (isFileUrl) {
+          // Imagens locais (file://) não podem ser buscadas via fetch/XMLHttpRequest.
+          // Carregamos diretamente e confiamos na verificação de contaminação.
+          shouldForceBlob = false;
+        } else {
+          // Convertemos para Blob sempre que houver risco de CORS ou quando
+          // estivermos rodando via file:// e a origem for remota.
+          shouldForceBlob = !sameOrigin || runningFromFile;
+        }
       }
 
       shouldRequestCors = !isDataUrl && !isFileUrl && !sameOrigin;
