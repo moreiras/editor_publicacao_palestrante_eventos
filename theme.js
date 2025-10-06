@@ -5,7 +5,7 @@ window.THEME = {
 
   // Referências visuais opcionais
   bgUrl: './template-teste-ixforum.png', // imagem de fundo em alta resolução
-  textOnDark: '#FFA500',
+  textOnDark: '#FFFFFF',
   overlayOpacity: 0,
 
   // Layout para formatação final em 1080 x 1350 (proporção 4:5)
