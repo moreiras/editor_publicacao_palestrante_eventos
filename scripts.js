@@ -311,10 +311,10 @@
       ? Math.round(textLayout.width * dpr)
       : W - pad * 2 - (photoSize + colGap);
 
-    const nome = (inpNome.value || '').trim() || 'José da Silva';
-    const cargo = (inpCargo.value || '').trim() || '';
-    const empresa = (inpEmpresa.value || '').trim() || '';
-    const titulo = (inpTitulo.value || '').trim() || '';
+    const nome = (inpNome.value || '').trim() || 'Seu Nome Aqui';
+    const cargo = (inpCargo.value || '').trim() || 'Cargo';
+    const empresa = (inpEmpresa.value || '').trim() || 'Empresa';
+    const titulo = (inpTitulo.value || '').trim() || 'Título da Atividade';
     const info = [
       (inpData.value || '').trim(),
       (inpHorario.value || '').trim()
