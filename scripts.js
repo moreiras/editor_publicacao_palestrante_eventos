@@ -119,10 +119,26 @@
   async function loadImage(url) {
     return new Promise((resolve, reject) => {
       const image = new Image();
-      image.crossOrigin = 'anonymous';
+      let finalUrl = url;
+
+      try {
+        const resolvedUrl = new URL(url, window.location.href);
+        finalUrl = resolvedUrl.href;
+        const isDataUrl = resolvedUrl.protocol === 'data:';
+        const isFileUrl = resolvedUrl.protocol === 'file:';
+        const sameOrigin = resolvedUrl.origin === window.location.origin;
+
+        if (!isDataUrl && !isFileUrl && !sameOrigin) {
+          image.crossOrigin = 'anonymous';
+        }
+      } catch (error) {
+        // Mantém a URL original caso não seja possível resolvê-la (ex.: caminhos relativos não padrão)
+        finalUrl = url;
+      }
+
       image.onload = () => resolve(image);
       image.onerror = reject;
-      image.src = url;
+      image.src = finalUrl;
     });
   }
 
