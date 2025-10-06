@@ -19,16 +19,10 @@ window.THEME = {
       size: 500 // tamanho do lado da foto (px)
     },
     text: {
-<<<<<<< Updated upstream
-      x: 72,          // posição X inicial dos textos (px)
-      y: 120,         // posição Y inicial (px)
-      width: 540      // largura máxima do bloco de texto (px)
-=======
       x: 20,          // posição X inicial dos textos (px)
       y: 600,         // posição Y inicial (px)
       width: 360,     // largura máxima do bloco de texto (px)
       gapAfterEvent: 52 // espaço entre o nome do evento e os demais textos (px)
->>>>>>> Stashed changes
     }
   },
 
