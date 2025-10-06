@@ -14,9 +14,9 @@ window.THEME = {
 
   layout: {
     photo: {
-      x: 665,   // posição X da foto (px)
-      y: 259,   // posição Y da foto (px)
-      size: 367 // tamanho do lado da foto (px)
+      x: 626,   // posição X da foto (px)
+      y: 298,   // posição Y da foto (px)
+      size: 400 // tamanho do lado da foto (px)
     },
     text: {
       x: 48,          // posição X inicial dos textos (px)
@@ -29,14 +29,13 @@ window.THEME = {
   typography: {
     family: 'InterVar, system-ui, sans-serif',
     sizes: {
-      eventName: 36,
-      name: 58,
-      role: 30,
-      company: 28,
-      talkTitle: 32,
-      info: 26,
-      footer: 24,
-      social: 24
+      eventName: 42,
+      name: 66,
+      role: 32,
+      company: 30,
+      talkTitle: 36,
+      info: 28,
+      social: 30
     }
   }
 };

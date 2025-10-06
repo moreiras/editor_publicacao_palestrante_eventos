@@ -161,6 +161,28 @@
   }
 
   function getFormatPx() {
+    return { w: 1080, h: 1350 };
+  }
+
+  let cachedBgUrl = null;
+  let cachedBgImage = null;
+
+  async function getBackgroundImage(url) {
+    if (!url) return null;
+    if (cachedBgImage && cachedBgUrl === url) {
+      return cachedBgImage;
+    }
+    try {
+      const image = await loadImage(url);
+      cachedBgImage = image;
+      cachedBgUrl = url;
+      return image;
+    } catch (error) {
+      console.warn('Não foi possível carregar a imagem de fundo definida no tema.', error);
+      cachedBgImage = null;
+      cachedBgUrl = null;
+      return null;
+    }
     return { w: 1080, h: 1080 };
   }
 
@@ -177,6 +199,27 @@
     canvas.style.height = `${h * uiScale}px`;
 
     ctx.clearRect(0, 0, W, H);
+
+    let backgroundDrawn = false;
+    if (THEME.bgUrl) {
+      const bg = await getBackgroundImage(THEME.bgUrl);
+      if (bg) {
+        const scale = Math.max(W / bg.width, H / bg.height);
+        const bw = bg.width * scale;
+        const bh = bg.height * scale;
+        ctx.drawImage(bg, (W - bw) / 2, (H - bh) / 2, bw, bh);
+        backgroundDrawn = true;
+      }
+    }
+
+    if (!backgroundDrawn) {
+      const grad = ctx.createLinearGradient(0, 0, W, H);
+      grad.addColorStop(0, THEME.accent);
+      grad.addColorStop(1, THEME.accent2);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, W, H);
+    }
+
     const grad = ctx.createLinearGradient(0, 0, W, H);
     grad.addColorStop(0, THEME.accent);
     grad.addColorStop(1, THEME.accent2);
@@ -238,6 +281,7 @@
       (inpData.value || '').trim(),
       (inpHorario.value || '').trim()
     ].filter(Boolean).join(' • ');
+    const social = (inpSocial.value || '').trim();
 
     let y = eventNameY + gapAfterEvent;
 
@@ -267,6 +311,13 @@
       const size = fontSizes.info;
       setFont(600, size);
       y = wrapText(ctx, info, textX, y, textW, lh(size), 1);
+    }
+
+    if (social) {
+      const size = fontSizes.social;
+      y += Math.round(16 * dpr);
+      setFont(600, size);
+      y = wrapText(ctx, social, textX, y, textW, lh(size), 2);
     }
 
     if (cropper) {
