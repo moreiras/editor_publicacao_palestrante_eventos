@@ -24,7 +24,7 @@ window.THEME = {
       x: 20,          // posição X inicial dos textos (px)
       y: 600,         // posição Y inicial (px)
       width: 500,     // largura máxima do bloco de texto (px)
-      linespace: 60   // espaço extra entre os blocos de texto (px)
+      linespace: 15   // espaço extra entre os blocos de texto (px)
     }
   },
 
