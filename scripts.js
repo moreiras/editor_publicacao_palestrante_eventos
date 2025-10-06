@@ -37,7 +37,6 @@
   const rangeBrilho = document.getElementById('rangeBrilho');
   const rangeContraste = document.getElementById('rangeContraste');
   const rangeSaturacao = document.getElementById('rangeSaturacao');
-  const rangeHue = document.getElementById('rangeHue');
 
   const btnZoomIn = document.getElementById('btnZoomIn');
   const btnZoomOut = document.getElementById('btnZoomOut');
@@ -83,12 +82,16 @@
 
   const addTextGap = (value) => value + lineSpacing;
 
+  function readRangeValue(rangeEl, fallback = 100) {
+    const value = Number.parseFloat(rangeEl?.value);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
   function cssFilters() {
-    const brilho = Number(rangeBrilho.value) || 100;
-    const contraste = Number(rangeContraste.value) || 100;
-    const saturacao = Number(rangeSaturacao.value) || 100;
-    const hue = Number(rangeHue.value) || 0;
-    return `brightness(${brilho}%) contrast(${contraste}%) saturate(${saturacao}%) hue-rotate(${hue}deg)`;
+    const brilho = readRangeValue(rangeBrilho, 100);
+    const contraste = readRangeValue(rangeContraste, 100);
+    const saturacao = readRangeValue(rangeSaturacao, 100);
+    return `brightness(${brilho}%) contrast(${contraste}%) saturate(${saturacao}%)`;
   }
 
   function drawSquareWithFilters(img, sizePx, filters) {
@@ -469,7 +472,7 @@
     cropImg.src = url;
   });
 
-  [rangeBrilho, rangeContraste, rangeSaturacao, rangeHue].forEach((el) => {
+  [rangeBrilho, rangeContraste, rangeSaturacao].forEach((el) => {
     el.addEventListener('input', requestRedraw);
   });
 
@@ -489,7 +492,6 @@
     rangeBrilho.value = 100;
     rangeContraste.value = 100;
     rangeSaturacao.value = 100;
-    rangeHue.value = 0;
     cropper?.reset();
     requestRedraw();
   });
