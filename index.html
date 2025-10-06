@@ -85,14 +85,11 @@
             <label class="text-xs text-gray-700">Saturação
               <input id="rangeSaturacao" type="range" min="0" max="200" value="100" class="w-full">
             </label>
-            <label class="text-xs text-gray-700">Matiz (Hue)
-              <input id="rangeHue" type="range" min="-180" max="180" value="0" class="w-full">
-            </label>
           </div>
         </div>
         <div class="mt-4 grid grid-cols-1 gap-3">
-          <div class="w-full max-h-96 overflow-hidden rounded-2xl border border-dashed border-gray-300 p-2 bg-gray-50">
-            <img id="cropImg" alt="Pré-visualização para recorte (1:1)" class="max-h-80 mx-auto select-none" />
+          <div id="cropArea" class="w-full max-h-96 min-h-[280px] overflow-hidden rounded-2xl border border-dashed border-gray-300 p-2">
+            <img id="cropImg" alt="Pré-visualização para recorte (1:1)" class="max-h-full mx-auto select-none" />
           </div>
           <div class="flex flex-wrap gap-2">
             <button id="btnZoomIn" class="px-3 py-2 rounded-xl border">Zoom +</button>
