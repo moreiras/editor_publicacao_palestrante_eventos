@@ -125,6 +125,73 @@
     return `brightness(${brilho}%) contrast(${contraste}%) saturate(${saturacao}%)`;
   }
 
+  const canvasFilterSupported = (() => {
+    const testCanvas = document.createElement('canvas');
+    const testCtx = testCanvas.getContext('2d');
+    return typeof testCtx?.filter === 'string';
+  })();
+
+  function parseFilterValue(filters, name, fallback) {
+    const regex = new RegExp(`${name}\\(([^)]+)\\)`);
+    const match = filters.match(regex);
+    if (!match) return fallback;
+    const numeric = Number.parseFloat(match[1]);
+    return Number.isFinite(numeric) ? numeric : fallback;
+  }
+
+  function applyManualFilters(canvasEl, filters) {
+    if (!filters) return canvasEl;
+    const brilho = parseFilterValue(filters, 'brightness', 100) / 100;
+    const contraste = parseFilterValue(filters, 'contrast', 100) / 100;
+    const saturacao = parseFilterValue(filters, 'saturate', 100) / 100;
+
+    if (brilho === 1 && contraste === 1 && saturacao === 1) {
+      return canvasEl;
+    }
+
+    const ctxManual = canvasEl.getContext('2d');
+    if (!ctxManual) return canvasEl;
+
+    const imageData = ctxManual.getImageData(0, 0, canvasEl.width, canvasEl.height);
+    const { data } = imageData;
+    const contrastFactor = contraste;
+    const saturateFactor = saturacao;
+    const rLum = 0.2126;
+    const gLum = 0.7152;
+    const bLum = 0.0722;
+
+    for (let i = 0; i < data.length; i += 4) {
+      let r = data[i];
+      let g = data[i + 1];
+      let b = data[i + 2];
+
+      // brilho
+      r *= brilho;
+      g *= brilho;
+      b *= brilho;
+
+      // contraste
+      r = (r - 128) * contrastFactor + 128;
+      g = (g - 128) * contrastFactor + 128;
+      b = (b - 128) * contrastFactor + 128;
+
+      // saturação
+      if (saturateFactor !== 1) {
+        const lum = r * rLum + g * gLum + b * bLum;
+        r = lum + (r - lum) * saturateFactor;
+        g = lum + (g - lum) * saturateFactor;
+        b = lum + (b - lum) * saturateFactor;
+      }
+
+      data[i] = Math.round(Math.max(0, Math.min(255, r)));
+      data[i + 1] = Math.round(Math.max(0, Math.min(255, g)));
+      data[i + 2] = Math.round(Math.max(0, Math.min(255, b)));
+    }
+
+    ctxManual.putImageData(imageData, 0, 0);
+    return canvasEl;
+  }
+
   /**
    * Recorta uma imagem quadrada temporária e aplica filtros para preservar a
    * qualidade antes de desenhá-la no canvas principal.
@@ -134,8 +201,11 @@
     tempCanvas.width = sizePx;
     tempCanvas.height = sizePx;
     const g = tempCanvas.getContext('2d');
+    if (!g) return tempCanvas;
     g.imageSmoothingQuality = 'high';
-    if (filters) g.filter = filters;
+    if (filters && canvasFilterSupported) {
+      g.filter = filters;
+    }
 
     const imageRatio = img.width / img.height;
     let sx;
@@ -156,6 +226,9 @@
     }
 
     g.drawImage(img, sx, sy, sw, sh, 0, 0, sizePx, sizePx);
+    if (!canvasFilterSupported) {
+      return applyManualFilters(tempCanvas, filters);
+    }
     return tempCanvas;
   }
 
