@@ -10,18 +10,25 @@ window.THEME = {
   // paleta (alto contraste)
   accent: '#0B3E91',
   accent2: '#1E88E5',
-  textOnDark: '#FFFFFF',
+  textOnDark: '#E8c845',
 
   layout: {
     photo: {
-      x: 626,   // posição X da foto (px)
-      y: 298,   // posição Y da foto (px)
-      size: 400 // tamanho do lado da foto (px)
+      x: 400,   // posição X da foto (px)
+      y: 600,   // posição Y da foto (px)
+      size: 500 // tamanho do lado da foto (px)
     },
     text: {
+<<<<<<< Updated upstream
       x: 72,          // posição X inicial dos textos (px)
       y: 120,         // posição Y inicial (px)
       width: 540      // largura máxima do bloco de texto (px)
+=======
+      x: 20,          // posição X inicial dos textos (px)
+      y: 600,         // posição Y inicial (px)
+      width: 360,     // largura máxima do bloco de texto (px)
+      gapAfterEvent: 52 // espaço entre o nome do evento e os demais textos (px)
+>>>>>>> Stashed changes
     }
   },
 
