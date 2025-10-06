@@ -19,10 +19,10 @@ window.THEME = {
       size: 400 // tamanho do lado da foto (px)
     },
     text: {
-      x: 72,          // posição X inicial dos textos (px)
-      y: 120,         // posição Y inicial (px)
-      width: 540,     // largura máxima do bloco de texto (px)
-      gapAfterEvent: 52 // espaço entre o nome do evento e os demais textos (px)
+      x: 48,          // posição X inicial dos textos (px)
+      y: 60,          // posição Y inicial (px)
+      width: 577,     // largura máxima do bloco de texto (px)
+      gapAfterEvent: 42 // espaço entre o nome do evento e os demais textos (px)
     }
   },
 

@@ -18,6 +18,7 @@
     company: typography.sizes?.company ?? 28,
     talkTitle: typography.sizes?.talkTitle ?? 32,
     info: typography.sizes?.info ?? 26,
+    footer: typography.sizes?.footer ?? 24,
     social: typography.sizes?.social ?? 24
   };
 
@@ -182,6 +183,7 @@
       cachedBgUrl = null;
       return null;
     }
+    return { w: 1080, h: 1080 };
   }
 
   async function redraw() {
@@ -216,6 +218,26 @@
       grad.addColorStop(1, THEME.accent2);
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, W, H);
+    }
+
+    const grad = ctx.createLinearGradient(0, 0, W, H);
+    grad.addColorStop(0, THEME.accent);
+    grad.addColorStop(1, THEME.accent2);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    if (THEME.bgUrl) {
+      try {
+        const bg = await loadImage(THEME.bgUrl);
+        const scale = Math.max(W / bg.width, H / bg.height);
+        const bw = bg.width * scale;
+        const bh = bg.height * scale;
+        ctx.globalAlpha = 0.3;
+        ctx.drawImage(bg, (W - bw) / 2, (H - bh) / 2, bw, bh);
+        ctx.globalAlpha = 1;
+      } catch (error) {
+        console.warn('Não foi possível carregar a imagem de fundo definida no tema.', error);
+      }
     }
 
     ctx.fillStyle = 'rgba(0,0,0,0.45)';
@@ -324,6 +346,42 @@
       }
     }
 
+    const footerH = Math.round(66 * dpr);
+    const footerY = H - footerH;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, footerY, W, footerH);
+
+    setFont(800, fontSizes.footer);
+    ctx.fillStyle = '#fff';
+    const call = new URL(THEME.site).host;
+    const callWidth = ctx.measureText(call).width;
+    const footerTextHeight = Math.round(fontSizes.footer * dpr);
+    ctx.fillText(call, W - pad - callWidth, footerY + Math.round((footerH - footerTextHeight) / 2));
+
+    const social = (inpSocial.value || '').trim();
+    if (social) {
+      const badgePadX = Math.round(18 * dpr);
+      const badgePadY = Math.round(10 * dpr);
+      const size = fontSizes.social;
+      setFont(700, size);
+      const textWidth = ctx.measureText(social).width;
+      const badgeX = pad;
+      const badgeHeight = Math.round(40 * dpr);
+      const badgeY = footerY + Math.round((footerH - badgeHeight) / 2);
+      const badgeWidth = textWidth + badgePadX * 2;
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.beginPath();
+      const round = Math.round(12 * dpr);
+      ctx.moveTo(badgeX + round, badgeY);
+      ctx.arcTo(badgeX + badgeWidth, badgeY, badgeX + badgeWidth, badgeY + badgeHeight, round);
+      ctx.arcTo(badgeX + badgeWidth, badgeY + badgeHeight, badgeX, badgeY + badgeHeight, round);
+      ctx.arcTo(badgeX, badgeY + badgeHeight, badgeX, badgeY, round);
+      ctx.arcTo(badgeX, badgeY, badgeX + badgeWidth, badgeY, round);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = THEME.textOnDark;
+      ctx.fillText(social, badgeX + badgePadX, badgeY + badgePadY);
+    }
   }
 
   function throttle(fn, limit = 33) {
