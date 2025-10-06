@@ -31,7 +31,21 @@
 
 /* Fundo quadriculado discreto */
 #previewBg {
+  position: relative;
+}
+
+#previewBg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
   background: repeating-conic-gradient(#f3f4f6 0% 25%, #e5e7eb 0% 50%) 50% / 20px 20px;
+  z-index: 0;
+}
+
+#previewBg > * {
+  position: relative;
+  z-index: 1;
 }
 
 #cropArea {
