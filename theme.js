@@ -21,15 +21,13 @@ window.THEME = {
     text: {
       x: 72,          // posição X inicial dos textos (px)
       y: 120,         // posição Y inicial (px)
-      width: 540,     // largura máxima do bloco de texto (px)
-      gapAfterEvent: 52 // espaço entre o nome do evento e os demais textos (px)
+      width: 540      // largura máxima do bloco de texto (px)
     }
   },
 
   typography: {
     family: 'InterVar, system-ui, sans-serif',
     sizes: {
-      eventName: 42,
       name: 66,
       role: 32,
       company: 30,
