@@ -41,4 +41,4 @@ window.THEME = {
   }
 };
 
-window.TEXT_TEMPLATE = `Olá. Estarei presente no evento {{evento}}, promovido pelo NIC.br. Minha atividade será: "{{palestra}}", em {{data}}, {{horário}}! Saiba mais, se inscreva e acompanhe ao vivo em {{site}}! {{hashtags}}`;
+window.TEXT_TEMPLATE = `Olá. Estarei presente no evento: "{{evento}}", promovido pelo NIC.br. Minha atividade será: "{{palestra}}"! Saiba mais, inscreva-se para participar presencialmente ou online! {{site}} {{hashtags}}`;
