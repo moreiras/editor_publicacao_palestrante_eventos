@@ -117,27 +117,60 @@
   }
 
   async function loadImage(url) {
+    let finalUrl = url;
+    let objectUrl = null;
+    let shouldRequestCors = false;
+
+    try {
+      const resolvedUrl = new URL(url, window.location.href);
+      finalUrl = resolvedUrl.href;
+      const isDataUrl = resolvedUrl.protocol === 'data:';
+      const isFileUrl = resolvedUrl.protocol === 'file:';
+      const sameOrigin = resolvedUrl.origin === window.location.origin;
+
+      shouldRequestCors = !isDataUrl && !isFileUrl && !sameOrigin;
+    } catch (error) {
+      // Mantém a URL original caso não seja possível resolvê-la (ex.: caminhos relativos não padrão)
+      finalUrl = url;
+    }
+
+    if (shouldRequestCors) {
+      try {
+        const response = await fetch(finalUrl, { mode: 'cors' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+        finalUrl = objectUrl;
+        shouldRequestCors = false;
+      } catch (error) {
+        console.warn('Falha ao buscar a imagem com CORS. O fundo será omitido para permitir a exportação.', error);
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+        throw error;
+      }
+    }
+
     return new Promise((resolve, reject) => {
       const image = new Image();
-      let finalUrl = url;
+      image.crossOrigin = 'anonymous';
 
-      try {
-        const resolvedUrl = new URL(url, window.location.href);
-        finalUrl = resolvedUrl.href;
-        const isDataUrl = resolvedUrl.protocol === 'data:';
-        const isFileUrl = resolvedUrl.protocol === 'file:';
-        const sameOrigin = resolvedUrl.origin === window.location.origin;
-
-        if (!isDataUrl && !isFileUrl && !sameOrigin) {
-          image.crossOrigin = 'anonymous';
+      image.onload = () => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
         }
-      } catch (error) {
-        // Mantém a URL original caso não seja possível resolvê-la (ex.: caminhos relativos não padrão)
-        finalUrl = url;
-      }
+        resolve(image);
+      };
+      image.onerror = (error) => {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+        }
+        reject(error);
+      };
 
-      image.onload = () => resolve(image);
-      image.onerror = reject;
       image.src = finalUrl;
     });
   }
@@ -171,8 +204,13 @@
   let cachedBgUrl = null;
   let cachedBgImage = null;
 
+  const blockedBgUrls = new Set();
+
   async function getBackgroundImage(url) {
     if (!url) return null;
+    if (blockedBgUrls.has(url)) {
+      return null;
+    }
     if (cachedBgImage && cachedBgUrl === url) {
       return cachedBgImage;
     }
@@ -185,7 +223,18 @@
       console.warn('Não foi possível carregar a imagem de fundo definida no tema.', error);
       cachedBgImage = null;
       cachedBgUrl = null;
+      blockedBgUrls.add(url);
       return null;
+    }
+  }
+
+  function canvasIsExportable(context) {
+    try {
+      // A leitura de qualquer pixel dispara SecurityError quando o canvas está contaminado.
+      context.getImageData(0, 0, 1, 1);
+      return true;
+    } catch (error) {
+      return false;
     }
   }
 
@@ -211,7 +260,15 @@
         const bw = bg.width * scale;
         const bh = bg.height * scale;
         ctx.drawImage(bg, (W - bw) / 2, (H - bh) / 2, bw, bh);
-        backgroundDrawn = true;
+        if (canvasIsExportable(ctx)) {
+          backgroundDrawn = true;
+        } else {
+          console.warn('Fundo removido para evitar contaminação do canvas e permitir exportação.');
+          blockedBgUrls.add(THEME.bgUrl);
+          cachedBgImage = null;
+          cachedBgUrl = null;
+          ctx.clearRect(0, 0, W, H);
+        }
       }
     }
 
@@ -440,6 +497,11 @@
         return;
       }
       try {
+        const context = c.getContext('2d');
+        if (!context || !canvasIsExportable(context)) {
+          reject(new Error('Canvas contaminado.'));
+          return;
+        }
         c.toBlob((blob) => {
           if (blob) {
             resolve(blob);
@@ -470,7 +532,12 @@
       }
     } catch (error) {
       console.error('Erro ao exportar a imagem.', error);
-      alert('Não foi possível gerar a imagem. Verifique se as imagens usadas permitem exportação.');
+      if (error && /contaminado/i.test(error.message)) {
+        alert('O fundo utilizado não permite exportação. Ele foi desabilitado — tente novamente.');
+        await redraw();
+      } else {
+        alert('Não foi possível gerar a imagem. Verifique se as imagens usadas permitem exportação.');
+      }
     }
   });
 
@@ -489,7 +556,12 @@
       }
     } catch (error) {
       console.error('Não foi possível compartilhar a imagem.', error);
-      alert('Não foi possível compartilhar. Baixe a imagem e poste manualmente.');
+      if (error && /contaminado/i.test(error.message)) {
+        alert('O fundo utilizado não permite compartilhamento. Ele foi desabilitado — tente novamente.');
+        await redraw();
+      } else {
+        alert('Não foi possível compartilhar. Baixe a imagem e poste manualmente.');
+      }
     }
   });
 
