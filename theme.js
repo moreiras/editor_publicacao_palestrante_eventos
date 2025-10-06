@@ -10,7 +10,8 @@ window.THEME = {
   // paleta (alto contraste)
   accent: '#0B3E91',
   accent2: '#1E88E5',
-  textOnDark: '#E8c845',
+//  textOnDark: '#E8c845',
+  textOnDark: '#ffffff',
   overlayOpacity: 0,
 
   // 1080 x 1350 (proporção 4:5)
@@ -18,12 +19,12 @@ window.THEME = {
     photo: {
       x: 540,   // posição X da foto (px)
       y: 600,   // posição Y da foto (px)
-      size: 500 // tamanho do lado da foto (px)
+      size: 490 // tamanho do lado da foto (px)
     },
     text: {
-      x: 20,          // posição X inicial dos textos (px)
+      x: 30,          // posição X inicial dos textos (px)
       y: 600,         // posição Y inicial (px)
-      width: 500,     // largura máxima do bloco de texto (px)
+      width: 490,     // largura máxima do bloco de texto (px)
       linespace: 15   // espaço extra entre os blocos de texto (px)
     }
   },
