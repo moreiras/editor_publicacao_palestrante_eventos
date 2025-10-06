@@ -11,6 +11,7 @@ window.THEME = {
   accent: '#0B3E91',
   accent2: '#1E88E5',
   textOnDark: '#E8c845',
+  overlayOpacity: 0,
 
   layout: {
     photo: {
