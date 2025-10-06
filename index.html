@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Criador de post para eventos</title>
+
+<!-- Tailwind (client-side) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Cropper.js -->
+<link  href="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/cropperjs@1.6.2/dist/cropper.min.js"></script>
+
+<!-- FileSaver para download -->
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
+<style>
+  @font-face{
+    font-family: 'InterVar';
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+    src: url('https://rsms.me/inter/font-files/InterVariable.woff2?v=4.1') format('woff2');
+  }
+  :root{ font-family: InterVar, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial; }
+  /* Preview compacto, sem scroll próprio */
+  #preview { width: 100%; height: auto; max-width: 420px; }
+  #previewWrap { max-width: 420px; max-height: 70vh; overflow: hidden; }
+  @media (max-width: 640px){ #preview, #previewWrap { max-width: 92vw; } }
+  /* Fundo quadriculado discreto */
+  #previewBg { background: repeating-conic-gradient(#f3f4f6 0% 25%, #e5e7eb 0% 50%) 50% / 20px 20px; }
+</style>
+</head>
+<body class="min-h-screen bg-white">
+<header class="px-4 py-3 border-b border-gray-200 sticky top-0 bg-white/85 backdrop-blur z-10">
+  <div class="max-w-5xl mx-auto flex items-center gap-3">
+    <div class="text-xl font-bold">Post do Evento — NIC.br</div>
+    <div class="text-gray-500 text-sm">100% client-side • exporta imagem pronta</div>
+    <div class="ml-auto flex items-center gap-2">
+      <button id="btnExport" class="px-3 py-2 rounded-xl bg-black text-white text-sm font-semibold">Baixar imagem</button>
+      <button id="btnShare"  class="px-3 py-2 rounded-xl bg-gray-900 text-white text-sm font-semibold">Compartilhar…</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-6">
+  <!-- Formulário -->
+  <section class="space-y-6">
+    <div class="p-4 border border-gray-200 rounded-2xl shadow-sm">
+      <h2 class="text-base font-semibold mb-3">Dados do palestrante / sessão</h2>
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block sm:col-span-2">
+          <span class="text-sm text-gray-700">Nome (nome completo)</span>
+          <input id="inpNome" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Ex.: José da Silva" />
+        </label>
+        <label class="block sm:col-span-2">
+          <span class="text-sm text-gray-700">Cargo</span>
+          <input id="inpCargo" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Ex.: Diretor de Tecnologia" />
+        </label>
+        <label class="block sm:col-span-2">
+          <span class="text-sm text-gray-700">Empresa</span>
+          <input id="inpEmpresa" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Ex.: NIC.br" />
+        </label>
+        <label class="block sm:col-span-2">
+          <span class="text-sm text-gray-700">Nome da palestra</span>
+          <input id="inpTitulo" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Ex.: Futuro da Infraestrutura de Internet no Brasil" />
+        </label>
+      </div>
+      <div class="grid sm:grid-cols-3 gap-4 mt-4">
+        <label class="block">
+          <span class="text-sm text-gray-700">Dia</span>
+          <input id="inpData" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Ex.: 11/11/2025" />
+        </label>
+        <label class="block">
+          <span class="text-sm text-gray-700">Horário</span>
+          <input id="inpHorario" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Ex.: 14:30" />
+        </label>
+        <label class="block">
+          <span class="text-sm text-gray-700">@social (opcional)</span>
+          <input id="inpSocial" class="mt-1 w-full rounded-xl border-gray-300" placeholder="Ex.: @nicbr" />
+        </label>
+      </div>
+    </div>
+
+    <div class="p-4 border border-gray-200 rounded-2xl shadow-sm">
+      <h2 class="text-base font-semibold mb-3">Foto — upload, recorte e ajustes</h2>
+      <div class="grid sm:grid-cols-2 gap-4 items-start">
+        <label class="block">
+          <span class="text-sm text-gray-700">Carregar foto</span>
+          <input id="inpFoto" type="file" accept="image/*" class="mt-1 w-full rounded-xl border-gray-300" />
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="text-xs text-gray-700">Brilho
+            <input id="rangeBrilho" type="range" min="50" max="150" value="100" class="w-full">
+          </label>
+          <label class="text-xs text-gray-700">Contraste
+            <input id="rangeContraste" type="range" min="50" max="150" value="100" class="w-full">
+          </label>
+          <label class="text-xs text-gray-700">Saturação
+            <input id="rangeSaturacao" type="range" min="0" max="200" value="100" class="w-full">
+          </label>
+          <label class="text-xs text-gray-700">Matiz (Hue)
+            <input id="rangeHue" type="range" min="-180" max="180" value="0" class="w-full">
+          </label>
+        </div>
+      </div>
+      <div class="mt-4 grid grid-cols-1 gap-3">
+        <div class="w-full max-h-96 overflow-hidden rounded-2xl border border-dashed border-gray-300 p-2 bg-gray-50">
+          <img id="cropImg" alt="Pré-visualização para recorte (1:1)" class="max-h-80 mx-auto select-none" />
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button id="btnZoomIn" class="px-3 py-2 rounded-xl border">Zoom +</button>
+          <button id="btnZoomOut" class="px-3 py-2 rounded-xl border">Zoom −</button>
+          <button id="btnRotate" class="px-3 py-2 rounded-xl border">Girar 90°</button>
+          <button id="btnReset" class="px-3 py-2 rounded-xl border">Resetar ajustes</button>
+        </div>
+        <p class="text-xs text-gray-500">O recorte é <b>quadrado</b> (1:1). A imagem final usa exatamente essa área, sem distorção.</p>
+      </div>
+    </div>
+
+    <div class="p-4 border border-gray-200 rounded-2xl shadow-sm">
+      <h2 class="text-base font-semibold mb-2">Texto para redes (auto)</h2>
+      <textarea id="outTexto" class="w-full min-h-[120px] rounded-2xl border-gray-300 p-3" placeholder="Texto gerado automaticamente…"></textarea>
+      <p class="text-xs text-gray-500 mt-2">Atualiza automaticamente conforme você edita os campos.</p>
+    </div>
+  </section>
+
+  <!-- Preview compacto -->
+  <section class="space-y-4 lg:sticky lg:top-20 self-start">
+    <div class="p-4 border border-gray-200 rounded-2xl shadow-sm">
+      <h2 class="text-base font-semibold mb-3">Prévia do post</h2>
+      <div id="previewWrap" class="rounded-2xl p-3">
+        <div id="previewBg" class="rounded-xl p-2">
+          <canvas id="preview" class="w-full h-auto rounded-lg bg-white block"></canvas>
+        </div>
+      </div>
+      <p class="text-xs text-gray-500 mt-2">O preview é reduzido; a exportação é em alta resolução.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="max-w-5xl mx-auto px-4 pb-10 text-xs text-gray-500">
+  <p>Se o navegador suportar Web Share API (nível 2), dá pra compartilhar a imagem diretamente.</p>
+</footer>
+
+<script>
+/* ============================
+   CONFIGURAÇÃO NO TOPO (1 evento)
+   ============================ */
+const THEME = {
+  name:    'Semana de Infraestrutura 2025',          // nome do evento
+  site:    'https://semanainfra.nic.br/',            // URL do evento
+  hashtags:'#SemanaInfra #NICbr #InfraestruturaDeInternet',
+  // artes (opcionais)
+  bgUrl:   '',      // banner de fundo (PNG/JPG/WebP/SVG). Se vazio, usa gradiente.
+  logoUrl: '',      // logo do evento com transparência (PNG/SVG)
+
+  // paleta (alto contraste)
+  accent:  '#0B3E91',
+  accent2: '#1E88E5',
+  textOnDark: '#FFFFFF'
+};
+
+/* ===== Template de texto (fácil de editar) =====
+   Placeholders aceitos:
+   {{evento}}  {{palestra}}  {{data}}  {{horário}}  {{site}}  {{hashtags}}
+*/
+const TEXT_TEMPLATE = `Olá. Estarei presente no evento {{evento}}, promovido pelo NIC.br. Minha atividade será "{{palestra}}, em {{data}}, {{horário}}! Saiba mais, se inscreva e acompanhe ao vivo em {{site}}! {{hashtags}}`;
+
+/* ============================
+   ELEMENTOS
+   ============================ */
+const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+const canvas = document.getElementById('preview');
+const ctx     = canvas.getContext('2d');
+
+const inpNome      = document.getElementById('inpNome');
+const inpCargo     = document.getElementById('inpCargo');
+const inpEmpresa   = document.getElementById('inpEmpresa');
+const inpTitulo    = document.getElementById('inpTitulo');
+const inpData      = document.getElementById('inpData');
+const inpHorario   = document.getElementById('inpHorario');
+const inpSocial    = document.getElementById('inpSocial');
+
+const inpFoto      = document.getElementById('inpFoto');
+const cropImg      = document.getElementById('cropImg');
+
+const rangeBrilho    = document.getElementById('rangeBrilho');
+const rangeContraste = document.getElementById('rangeContraste');
+const rangeSaturacao = document.getElementById('rangeSaturacao');
+const rangeHue       = document.getElementById('rangeHue');
+
+const btnZoomIn   = document.getElementById('btnZoomIn');
+const btnZoomOut  = document.getElementById('btnZoomOut');
+const btnRotate   = document.getElementById('btnRotate');
+const btnReset    = document.getElementById('btnReset');
+
+const btnExport   = document.getElementById('btnExport');
+const btnShare    = document.getElementById('btnShare');
+
+const outTexto    = document.getElementById('outTexto');
+
+/* ============================
+   HELPERS
+   ============================ */
+function setFont(weight, sizePx){ ctx.font = `${weight} ${Math.round(sizePx*dpr)}px InterVar, system-ui, sans-serif`; }
+function fitFont(basePx, text, maxWidth, weight=800, minPx=28){
+  let s=basePx; setFont(weight, s);
+  while (ctx.measureText(text).width > maxWidth && s > minPx){ s-=2; setFont(weight, s); }
+  return s;
+}
+function wrapText(ctx, text, x, y, maxWidth, lineHeight, maxLines=3){
+  const words=(text||'').split(/\s+/); let line='', lines=0;
+  for (let n=0;n<words.length;n++){
+    const test=line+words[n]+' ';
+    if (ctx.measureText(test).width>maxWidth && n>0){
+      ctx.fillText(line.trim(), x, y);
+      line=words[n]+' '; y+=lineHeight; lines++;
+      if (lines>=maxLines-1) break;
+    } else line=test;
+  }
+  ctx.fillText(line.trim(), x, y);
+  return y + lineHeight;
+}
+const lh = (px)=>Math.round(px*1.35*dpr); // espaçamento generoso
+
+function cssFilters(){
+  const b=Number(rangeBrilho.value)||100;
+  const c=Number(rangeContraste.value)||100;
+  const s=Number(rangeSaturacao.value)||100;
+  const h=Number(rangeHue.value)||0;
+  return `brightness(${b}%) contrast(${c}%) saturate(${s}%) hue-rotate(${h}deg)`;
+}
+
+function drawSquareWithFilters(img, sizePx, filters){
+  const c=document.createElement('canvas');
+  c.width=c.height=sizePx;
+  const g=c.getContext('2d'); g.imageSmoothingQuality='high';
+  if(filters) g.filter=filters;
+  // central cover mantendo 1:1
+  const ir=img.width/img.height; let sx,sy,sw,sh;
+  if(ir>1){ sh=img.height; sw=sh; sx=(img.width-sw)/2; sy=0; }
+  else    { sw=img.width; sh=sw; sx=0; sy=(img.height-sh)/2; }
+  g.drawImage(img, sx,sy, sw,sh, 0,0, sizePx,sizePx);
+  return c;
+}
+
+async function loadImage(url){
+  return new Promise((resolve,reject)=>{
+    const im=new Image(); im.crossOrigin='anonymous';
+    im.onload=()=>resolve(im); im.onerror=reject; im.src=url;
+  });
+}
+
+/* ============================
+   TEXTO (template)
+   ============================ */
+function renderTemplate(tpl, data){
+  return tpl
+    .replace(/{{evento}}/g, data.evento || '')
+    .replace(/{{palestra}}/g, data.palestra || '')
+    .replace(/{{data}}/g, data.data || '')
+    .replace(/{{horário}}/g, data.horario || '')
+    .replace(/{{site}}/g, data.site || '')
+    .replace(/{{hashtags}}/g, data.hashtags || '');
+}
+function atualizarTexto(){
+  const payload = {
+    evento:   THEME.name,
+    palestra: (inpTitulo.value||'').trim(),
+    data:     (inpData.value||'').trim(),
+    horario:  (inpHorario.value||'').trim(),
+    site:     THEME.site,
+    hashtags: THEME.hashtags
+  };
+  outTexto.value = renderTemplate(TEXT_TEMPLATE, payload);
+}
+
+/* ============================
+   DESENHO
+   ============================ */
+function getFormatPx(){ return { w: 1080, h: 1080 }; }
+
+async function redraw(){
+  const {w,h}=getFormatPx();
+  const W=Math.round(w*dpr), H=Math.round(h*dpr);
+  canvas.width=W; canvas.height=H;
+
+  // Preview reduzido
+  const maxPreview=Math.min(window.innerWidth*0.38, 420);
+  const uiScale=Math.min(1, maxPreview/w);
+  canvas.style.width=(w*uiScale)+'px';
+  canvas.style.height=(h*uiScale)+'px';
+
+  // Fundo
+  ctx.clearRect(0,0,W,H);
+  const grad=ctx.createLinearGradient(0,0,W,H);
+  grad.addColorStop(0, THEME.accent); grad.addColorStop(1, THEME.accent2);
+  ctx.fillStyle=grad; ctx.fillRect(0,0,W,H);
+
+  if (THEME.bgUrl){
+    try{
+      const bg=await loadImage(THEME.bgUrl);
+      const scale=Math.max(W/bg.width, H/bg.height);
+      const bw=bg.width*scale, bh=bg.height*scale;
+      ctx.globalAlpha=0.30;
+      ctx.drawImage(bg,(W-bw)/2,(H-bh)/2,bw,bh);
+      ctx.globalAlpha=1;
+    }catch{}
+  }
+
+  ctx.fillStyle='rgba(0,0,0,0.45)'; ctx.fillRect(0,0,W,H);
+
+  // Tipografia
+  const textColor=THEME.textOnDark||'#fff';
+  ctx.fillStyle=textColor; ctx.textBaseline='top';
+  const pad=48*dpr;
+
+  // Layout: texto à esquerda, foto quadrada à direita
+  const colGap=Math.round(40*dpr);
+  const photoSize=Math.round(W*0.34); // quadrado
+  const textX=pad, textW=W - pad*2 - (photoSize + colGap);
+  const photoX=W - pad - photoSize;
+  let photoY=Math.round(H*0.24);
+
+  // Cabeçalho (nome do evento)
+  setFont(800, 36);
+  ctx.fillText(THEME.name, textX, pad + Math.round(12*dpr));
+
+  // Blocos de texto
+  const nome    = (inpNome.value||'').trim() || 'José da Silva';
+  const cargo   = (inpCargo.value||'').trim() || '';
+  const empresa = (inpEmpresa.value||'').trim() || '';
+  const titulo  = (inpTitulo.value||'').trim() || '';
+  const info    = [ (inpData.value||'').trim(), (inpHorario.value||'').trim() ].filter(Boolean).join(' • ');
+
+  let y = pad + Math.round(12*dpr) + Math.round(42*dpr);
+
+  // Nome (até 2 linhas)
+  let nomeSize = fitFont(58, nome, textW, 800, 30);
+  setFont(800, nomeSize);
+  y = wrapText(ctx, nome, textX, y, textW, lh(nomeSize), 2);
+
+  // Cargo (1–2 linhas)
+  if (cargo){
+    const s=30; setFont(600, s);
+    y = wrapText(ctx, cargo, textX, y, textW, lh(s), 2);
+  }
+
+  // Empresa (1–2 linhas)
+  if (empresa){
+    const s=28; setFont(500, s);
+    y = wrapText(ctx, empresa, textX, y, textW, lh(s), 2);
+  }
+
+  // Título
+  if (titulo){
+    const s=32; setFont(700, s);
+    y = wrapText(ctx, `“${titulo}”`, textX, y, textW, lh(s), 3);
+  }
+
+  // Dia e horário (1 linha)
+  if (info){
+    const s=26; setFont(600, s);
+    y = wrapText(ctx, info, textX, y, textW, lh(s), 1);
+  }
+
+  // Foto quadrada: exatamente o recorte
+  if (cropper){
+    const cropped=cropper.getCroppedCanvas({ imageSmoothingQuality:'high' }); // 1:1
+    if (cropped){
+      const filteredCanvas = drawSquareWithFilters(cropped, photoSize, cssFilters());
+      // Moldura discreta
+      const m=Math.round(22*dpr);
+      ctx.save(); ctx.globalAlpha=0.90; ctx.fillStyle='rgba(0,0,0,0.30)';
+      ctx.fillRect(photoX - m/2, photoY - m/2, photoSize + m, photoSize + m);
+      ctx.restore();
+      // Canto arredondado
+      const r=Math.round(24*dpr);
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(photoX + r, photoY);
+      ctx.arcTo(photoX + photoSize, photoY, photoX + photoSize, photoY + photoSize, r);
+      ctx.arcTo(photoX + photoSize, photoY + photoSize, photoX, photoY + photoSize, r);
+      ctx.arcTo(photoX, photoY + photoSize, photoX, photoY, r);
+      ctx.arcTo(photoX, photoY, photoX + photoSize, photoY, r);
+      ctx.closePath(); ctx.clip();
+      ctx.drawImage(filteredCanvas, photoX, photoY, photoSize, photoSize);
+      ctx.restore();
+    }
+  }
+
+  // Rodapé (URL + social)
+  const footerH=Math.round(66*dpr), footerY=H-footerH;
+  ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,footerY,W,footerH);
+
+  // URL à direita
+  setFont(800,24); ctx.fillStyle='#fff';
+  const call=new URL(THEME.site).host; const cw=ctx.measureText(call).width;
+  ctx.fillText(call, W - pad - cw, footerY + Math.round((footerH - 24*dpr)/2));
+
+  // Social à esquerda
+  const social=(inpSocial.value||'').trim();
+  if (social){
+    const badgePadX=Math.round(18*dpr), badgePadY=Math.round(10*dpr);
+    const s=24; setFont(700,s); const tw=ctx.measureText(social).width;
+    const bx=pad, bh=Math.round(40*dpr), by=footerY + Math.round((footerH - bh)/2), bw=tw + badgePadX*2;
+    ctx.fillStyle='rgba(255,255,255,0.12)';
+    ctx.beginPath(); const rr=Math.round(12*dpr);
+    ctx.moveTo(bx + rr, by);
+    ctx.arcTo(bx + bw, by, bx + bw, by + bh, rr);
+    ctx.arcTo(bx + bw, by + bh, bx, by + bh, rr);
+    ctx.arcTo(bx, by + bh, bx, by, rr);
+    ctx.arcTo(bx, by, bx + bw, by, rr);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle=THEME.textOnDark; ctx.fillText(social, bx + badgePadX, by + badgePadY);
+  }
+}
+
+/* ============================
+   Cropper 1:1 + ajustes e eventos
+   ============================ */
+let cropper=null;
+function throttle(fn, limit=33){
+  let t=false, last=null;
+  return (...args)=>{ last=args; if(!t){ fn.apply(null,last); t=true; setTimeout(()=>{t=false; if(last){fn.apply(null,last); last=null;}}, limit); } };
+}
+const requestRedraw=throttle(()=>{ redraw(); }, 33);
+
+inpFoto.addEventListener('change', (ev)=>{
+  const file=ev.target.files?.[0]; if(!file) return;
+  const url=URL.createObjectURL(file); cropImg.src=url;
+  cropImg.onload=()=>{
+    if(cropper) cropper.destroy();
+    cropper=new Cropper(cropImg,{
+      viewMode:1,
+      aspectRatio:1, // quadrado fixo
+      dragMode:'move',
+      background:false,
+      autoCropArea:0.95,
+      ready(){ requestRedraw(); },
+      crop(){ requestRedraw(); },
+      cropend(){ requestRedraw(); }
+    });
+  };
+});
+
+[rangeBrilho, rangeContraste, rangeSaturacao, rangeHue].forEach(el=>{
+  el.addEventListener('input', requestRedraw);
+});
+btnZoomIn.addEventListener('click', ()=>{ cropper?.zoom(0.1); requestRedraw(); });
+btnZoomOut.addEventListener('click',()=>{ cropper?.zoom(-0.1); requestRedraw(); });
+btnRotate.addEventListener('click', ()=>{ cropper?.rotate(90); requestRedraw(); });
+btnReset.addEventListener('click', ()=>{
+  rangeBrilho.value=100; rangeContraste.value=100; rangeSaturacao.value=100; rangeHue.value=0;
+  cropper?.reset(); requestRedraw();
+});
+
+/* ============================
+   Texto auto + export/share
+   ============================ */
+[inpNome, inpCargo, inpEmpresa, inpTitulo, inpData, inpHorario, inpSocial].forEach(el=>{
+  el.addEventListener('input', ()=>{ atualizarTexto(); requestRedraw(); });
+  el.addEventListener('change', ()=>{ atualizarTexto(); requestRedraw(); });
+});
+
+async function canvasToBlob(c){ return new Promise(res=>c.toBlob(res,'image/png',0.98)); }
+
+btnExport.addEventListener('click', async ()=>{
+  const blob=await canvasToBlob(canvas);
+  const nome=(inpNome.value||'palestrante').trim().replace(/\s+/g,'-');
+  const fileName=`post-${THEME.name.replace(/\s+/g,'-')}-${nome}.png`;
+  if(window.saveAs) saveAs(blob, fileName);
+  else { const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=fileName; a.click(); URL.revokeObjectURL(url); }
+});
+
+btnShare.addEventListener('click', async ()=>{
+  try{
+    const blob=await canvasToBlob(canvas);
+    const file=new File([blob],'post.png',{type:'image/png'});
+    const text=outTexto.value;
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      await navigator.share({ files:[file], text });
+    } else if (navigator.share){
+      await navigator.share({ text });
+      alert('Seu navegador não compartilha imagem direto. Use “Baixar imagem”.');
+    } else {
+      alert('Web Share API não suportada. Use “Baixar imagem”.');
+    }
+  } catch { alert('Não foi possível compartilhar. Baixe a imagem e poste manualmente.'); }
+});
+
+/* ============================
+   Inicialização
+   ============================ */
+atualizarTexto();
+redraw();
+</script>
+</body>
+</html>
