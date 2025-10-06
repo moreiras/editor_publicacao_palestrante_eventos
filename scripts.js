@@ -390,7 +390,6 @@
 
     ctx.clearRect(0, 0, W, H);
 
-    let backgroundDrawn = false;
     if (THEME.bgUrl) {
       const bg = await getBackgroundImage(THEME.bgUrl);
       if (bg) {
@@ -398,9 +397,7 @@
         const bw = bg.width * scale;
         const bh = bg.height * scale;
         ctx.drawImage(bg, (W - bw) / 2, (H - bh) / 2, bw, bh);
-        if (canvasIsExportable(ctx)) {
-          backgroundDrawn = true;
-        } else {
+        if (!canvasIsExportable(ctx)) {
           console.warn('Fundo removido para evitar contaminação do canvas e permitir exportação.');
           blockedBgUrls.add(THEME.bgUrl);
           cachedBgImage = null;
@@ -408,14 +405,6 @@
           ctx.clearRect(0, 0, W, H);
         }
       }
-    }
-
-    if (!backgroundDrawn) {
-      const grad = ctx.createLinearGradient(0, 0, W, H);
-      grad.addColorStop(0, THEME.accent);
-      grad.addColorStop(1, THEME.accent2);
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, W, H);
     }
 
     const overlayOpacity =
