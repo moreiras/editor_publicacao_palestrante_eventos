@@ -5,11 +5,6 @@ window.THEME = {
 
   // Referências visuais opcionais
   bgUrl: './template-teste-ixforum.png', // imagem de fundo em alta resolução
-  logoUrl: '', // logo do evento com transparência (PNG/SVG)
-
-  // Paleta principal (utilizada como degradê quando não há imagem de fundo)
-  accent: '#0B3E91',
-  accent2: '#1E88E5',
   textOnDark: '#ffffff',
   overlayOpacity: 0,
 
