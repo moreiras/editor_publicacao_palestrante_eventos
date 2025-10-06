@@ -348,13 +348,24 @@
     redraw();
   }, 33);
 
+  let currentObjectUrl = null;
+
   inpFoto.addEventListener('change', (ev) => {
     const file = ev.target.files?.[0];
     if (!file) return;
+
+    if (currentObjectUrl) {
+      URL.revokeObjectURL(currentObjectUrl);
+      currentObjectUrl = null;
+    }
+
     const url = URL.createObjectURL(file);
+    currentObjectUrl = url;
+
     cropImg.crossOrigin = 'anonymous';
     cropImg.onload = () => {
       if (cropper) cropper.destroy();
+      const objectUrl = url;
       cropper = new Cropper(cropImg, {
         viewMode: 1,
         aspectRatio: 1,
@@ -362,6 +373,10 @@
         background: false,
         autoCropArea: 0.95,
         ready() {
+          if (currentObjectUrl === objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            currentObjectUrl = null;
+          }
           requestRedraw();
         },
         crop() {
@@ -371,10 +386,12 @@
           requestRedraw();
         }
       });
-      URL.revokeObjectURL(url);
     };
     cropImg.onerror = () => {
-      URL.revokeObjectURL(url);
+      if (currentObjectUrl === url) {
+        URL.revokeObjectURL(url);
+        currentObjectUrl = null;
+      }
       alert('Não foi possível carregar esta imagem.');
     };
     cropImg.src = url;
