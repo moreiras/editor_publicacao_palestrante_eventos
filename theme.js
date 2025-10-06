@@ -4,7 +4,7 @@ window.THEME = {
   hashtags: '#SemanaInfra #NICbr #InfraestruturaDeInternet',
 
   // artes (opcionais)
-  bgUrl: '',  // banner de fundo (PNG/JPG/WebP/SVG). Se vazio, usa gradiente.
+  bgUrl: 'template-teste-ixforum.png',  // banner de fundo (PNG/JPG/WebP/SVG). Se vazio, usa gradiente.
   logoUrl: '', // logo do evento com transparência (PNG/SVG)
 
   // paleta (alto contraste)
