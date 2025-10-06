@@ -168,6 +168,7 @@
     let objectUrl = null;
     let shouldRequestCors = false;
     let shouldForceBlob = false;
+    let shouldSetCrossOrigin = false;
 
     try {
       const resolvedUrl = new URL(url, window.location.href);
@@ -190,6 +191,7 @@
       }
 
       shouldRequestCors = !isDataUrl && !isFileUrl && !sameOrigin;
+      shouldSetCrossOrigin = shouldRequestCors;
     } catch (error) {
       // Mantém a URL original caso não seja possível resolvê-la (ex.: caminhos relativos não padrão).
       finalUrl = url;
@@ -270,7 +272,9 @@
 
     return new Promise((resolve, reject) => {
       const image = new Image();
-      image.crossOrigin = 'anonymous';
+      if (shouldSetCrossOrigin) {
+        image.crossOrigin = 'anonymous';
+      }
 
       image.onload = () => {
         if (objectUrl) {
@@ -334,8 +338,7 @@
    * problemáticas para evitar repetição de erros.
    */
   async function getBackgroundImage(url) {
-    if (!url) return null;
-    if (blockedBgUrls.has(url)) {
+    if (!url || blockedBgUrls.has(url)) {
       return null;
     }
     if (cachedBgImage && cachedBgUrl === url) {
