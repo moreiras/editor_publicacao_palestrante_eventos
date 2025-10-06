@@ -280,8 +280,12 @@
       ctx.fillRect(0, 0, W, H);
     }
 
-    ctx.fillStyle = 'rgba(0,0,0,0.45)';
-    ctx.fillRect(0, 0, W, H);
+    const overlayOpacity =
+      typeof THEME.overlayOpacity === 'number' ? THEME.overlayOpacity : 0.45;
+    if (overlayOpacity > 0) {
+      ctx.fillStyle = `rgba(0,0,0,${overlayOpacity})`;
+      ctx.fillRect(0, 0, W, H);
+    }
 
     const textColor = THEME.textOnDark || '#fff';
     ctx.fillStyle = textColor;
