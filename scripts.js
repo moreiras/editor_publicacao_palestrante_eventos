@@ -12,7 +12,6 @@
   const typography = THEME.typography || {};
   const fontFamily = typography.family || 'InterVar, system-ui, sans-serif';
   const fontSizes = {
-    eventName: typography.sizes?.eventName ?? 36,
     name: typography.sizes?.name ?? 58,
     role: typography.sizes?.role ?? 30,
     company: typography.sizes?.company ?? 28,
@@ -55,16 +54,6 @@
 
   function setFont(weight, sizePx) {
     ctx.font = `${weight} ${Math.round(sizePx * dpr)}px ${fontFamily}`;
-  }
-
-  function fitFont(basePx, text, maxWidth, weight = 800, minPx = 28) {
-    let size = basePx;
-    setFont(weight, size);
-    while (ctx.measureText(text).width > maxWidth && size > minPx) {
-      size -= 2;
-      setFont(weight, size);
-    }
-    return size;
   }
 
   function wrapText(ctxInstance, text, x, y, maxWidth, lineHeight, maxLines = 3) {
@@ -130,10 +119,7 @@
   async function loadImage(url) {
     return new Promise((resolve, reject) => {
       const image = new Image();
-      const isRemoteResource = /^(https?:)?\/\//i.test(url);
-      if (isRemoteResource) {
-        image.crossOrigin = 'anonymous';
-      }
+      image.crossOrigin = 'anonymous';
       image.onload = () => resolve(image);
       image.onerror = reject;
       image.src = url;
@@ -241,18 +227,12 @@
       : Math.round(H * 0.24);
 
     const textX = textLayout.x != null ? Math.round(textLayout.x * dpr) : pad;
-    const eventNameY = textLayout.y != null
+    const textStartY = textLayout.y != null
       ? Math.round(textLayout.y * dpr)
       : pad + Math.round(12 * dpr);
     const textW = textLayout.width != null
       ? Math.round(textLayout.width * dpr)
       : W - pad * 2 - (photoSize + colGap);
-    const gapAfterEvent = textLayout.gapAfterEvent != null
-      ? Math.round(textLayout.gapAfterEvent * dpr)
-      : Math.round(42 * dpr);
-
-    setFont(800, fontSizes.eventName);
-    ctx.fillText(THEME.name, textX, eventNameY);
 
     const nome = (inpNome.value || '').trim() || 'José da Silva';
     const cargo = (inpCargo.value || '').trim() || '';
@@ -264,9 +244,9 @@
     ].filter(Boolean).join(' • ');
     const socialHandle = (inpSocial.value || '').trim();
 
-    let y = eventNameY + gapAfterEvent;
+    let y = textStartY;
 
-    const nomeSize = fitFont(fontSizes.name, nome, textW, 800, 30);
+    const nomeSize = fontSizes.name;
     setFont(800, nomeSize);
     y = wrapText(ctx, nome, textX, y, textW, lh(nomeSize), 2);
 
@@ -356,7 +336,7 @@
     const file = ev.target.files?.[0];
     if (!file) return;
     const url = URL.createObjectURL(file);
-    cropImg.src = url;
+    cropImg.crossOrigin = 'anonymous';
     cropImg.onload = () => {
       if (cropper) cropper.destroy();
       cropper = new Cropper(cropImg, {
@@ -375,7 +355,13 @@
           requestRedraw();
         }
       });
+      URL.revokeObjectURL(url);
     };
+    cropImg.onerror = () => {
+      URL.revokeObjectURL(url);
+      alert('Não foi possível carregar esta imagem.');
+    };
+    cropImg.src = url;
   });
 
   [rangeBrilho, rangeContraste, rangeSaturacao, rangeHue].forEach((el) => {
@@ -415,22 +401,43 @@
   });
 
   function canvasToBlob(c) {
-    return new Promise((resolve) => c.toBlob(resolve, 'image/png', 0.98));
+    return new Promise((resolve, reject) => {
+      if (!c) {
+        reject(new Error('Canvas não encontrado.'));
+        return;
+      }
+      try {
+        c.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Falha ao gerar a imagem.'));
+          }
+        }, 'image/png', 0.98);
+      } catch (error) {
+        reject(error);
+      }
+    });
   }
 
   btnExport.addEventListener('click', async () => {
-    const blob = await canvasToBlob(canvas);
-    const nome = (inpNome.value || 'palestrante').trim().replace(/\s+/g, '-');
-    const fileName = `post-${THEME.name.replace(/\s+/g, '-')}-${nome}.png`;
-    if (window.saveAs) {
-      window.saveAs(blob, fileName);
-    } else {
-      const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = fileName;
-      anchor.click();
-      URL.revokeObjectURL(url);
+    try {
+      const blob = await canvasToBlob(canvas);
+      const nome = (inpNome.value || 'palestrante').trim().replace(/\s+/g, '-');
+      const fileName = `post-${THEME.name.replace(/\s+/g, '-')}-${nome}.png`;
+      if (window.saveAs) {
+        window.saveAs(blob, fileName);
+      } else {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = fileName;
+        anchor.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error('Erro ao exportar a imagem.', error);
+      alert('Não foi possível gerar a imagem. Verifique se as imagens usadas permitem exportação.');
     }
   });
 
