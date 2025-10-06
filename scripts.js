@@ -14,7 +14,6 @@
   const fontSizes = {
     name: typography.sizes?.name ?? 58,
     role: typography.sizes?.role ?? 30,
-    company: typography.sizes?.company ?? 28,
     talkTitle: typography.sizes?.talkTitle ?? 32,
     info: typography.sizes?.info ?? 26,
     social: typography.sizes?.social ?? 24
@@ -76,7 +75,13 @@
     return y + lineHeight;
   }
 
+  const lineSpacing = textLayout.linespace != null
+    ? Math.round(textLayout.linespace * dpr)
+    : 0;
+
   const lh = (px) => Math.round(px * 1.35 * dpr);
+
+  const addTextGap = (value) => value + lineSpacing;
 
   function cssFilters() {
     const brilho = Number(rangeBrilho.value) || 100;
@@ -312,8 +317,15 @@
       : W - pad * 2 - (photoSize + colGap);
 
     const nome = (inpNome.value || '').trim() || 'Seu Nome Aqui';
-    const cargo = (inpCargo.value || '').trim() || 'Cargo';
-    const empresa = (inpEmpresa.value || '').trim() || 'Empresa';
+    const cargoValue = (inpCargo.value || '').trim();
+    const empresaValue = (inpEmpresa.value || '').trim();
+    const cargoEmpresaParts = [];
+    if (cargoValue) cargoEmpresaParts.push(cargoValue);
+    if (empresaValue) cargoEmpresaParts.push(empresaValue);
+    const hasCargoEmpresa = cargoEmpresaParts.length > 0;
+    const cargoEmpresa = hasCargoEmpresa
+      ? cargoEmpresaParts.join(' - ')
+      : 'Cargo - Empresa';
     const titulo = (inpTitulo.value || '').trim() || 'Título da Atividade';
     const info = [
       (inpData.value || '').trim(),
@@ -325,30 +337,28 @@
 
     const nomeSize = fontSizes.name;
     setFont(800, nomeSize);
-    y = wrapText(ctx, nome, textX, y, textW, lh(nomeSize), 2);
+    y = wrapText(ctx, nome, textX, y, textW, lh(nomeSize), 4);
+    y = addTextGap(y);
 
-    if (cargo) {
+    if (hasCargoEmpresa || (!cargoValue && !empresaValue)) {
       const size = fontSizes.role;
       setFont(600, size);
-      y = wrapText(ctx, cargo, textX, y, textW, lh(size), 2);
-    }
-
-    if (empresa) {
-      const size = fontSizes.company;
-      setFont(500, size);
-      y = wrapText(ctx, empresa, textX, y, textW, lh(size), 2);
+      y = wrapText(ctx, cargoEmpresa, textX, y, textW, lh(size), 4);
+      y = addTextGap(y);
     }
 
     if (titulo) {
       const size = fontSizes.talkTitle;
       setFont(700, size);
-      y = wrapText(ctx, `“${titulo}”`, textX, y, textW, lh(size), 3);
+      y = wrapText(ctx, `“${titulo}”`, textX, y, textW, lh(size), 6);
+      y = addTextGap(y);
     }
 
     if (info) {
       const size = fontSizes.info;
       setFont(600, size);
       y = wrapText(ctx, info, textX, y, textW, lh(size), 1);
+      y = addTextGap(y);
     }
 
     if (socialHandle) {
@@ -356,6 +366,7 @@
       y += Math.round(16 * dpr);
       setFont(600, size);
       y = wrapText(ctx, socialHandle, textX, y, textW, lh(size), 2);
+      y = addTextGap(y);
     }
 
     if (cropper) {
