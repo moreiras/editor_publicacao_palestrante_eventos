@@ -25,13 +25,55 @@
   const textLayout = layout.text || {};
   const typography = THEME.typography || {};
   const fontFamily = typography.family || 'InterVar, system-ui, sans-serif';
-  const fontSizes = {
-    name: typography.sizes?.name ?? 58,
-    role: typography.sizes?.role ?? 30,
-    talkTitle: typography.sizes?.talkTitle ?? 32,
-    info: typography.sizes?.info ?? 26,
-    social: typography.sizes?.social ?? 24
+  const legacySizes = typography.sizes || {};
+  const textStylesConfig = typography.textStyles || {};
+  const fallbackTextColor = THEME.textOnDark || '#000000';
+
+  function resolveLegacySize(key, fallback) {
+    const value = Number.parseFloat(legacySizes[key]);
+    return Number.isFinite(value) ? value : fallback;
+  }
+
+  const defaultTextStyles = {
+    name: { size: resolveLegacySize('name', 58), color: fallbackTextColor, align: 'left' },
+    cargo: { size: resolveLegacySize('role', 30), color: fallbackTextColor, align: 'left' },
+    empresa: { size: resolveLegacySize('role', 30), color: fallbackTextColor, align: 'left' },
+    palestra: { size: resolveLegacySize('talkTitle', 32), color: fallbackTextColor, align: 'left' },
+    dia: { size: resolveLegacySize('info', 26), color: fallbackTextColor, align: 'left' },
+    horario: { size: resolveLegacySize('info', 26), color: fallbackTextColor, align: 'left' },
+    social: {
+      size: resolveLegacySize('social', resolveLegacySize('info', 24)),
+      color: fallbackTextColor,
+      align: 'left'
+    }
   };
+
+  function resolveTextStyle(key) {
+    const defaults = defaultTextStyles[key] || { size: 24, color: fallbackTextColor, align: 'left' };
+    const style = textStylesConfig[key] || {};
+
+    const candidateSize = Number.parseFloat(style.size);
+    const size = Number.isFinite(candidateSize) ? candidateSize : defaults.size;
+
+    const color = typeof style.color === 'string' && style.color.trim()
+      ? style.color
+      : defaults.color;
+
+    const alignCandidate = typeof style.align === 'string'
+      ? style.align.trim().toLowerCase()
+      : defaults.align;
+    const align = alignCandidate === 'center' || alignCandidate === 'right'
+      ? alignCandidate
+      : 'left';
+
+    return { size, color, align };
+  }
+
+  function alignedX(baseX, width, align) {
+    if (align === 'center') return baseX + width / 2;
+    if (align === 'right') return baseX + width;
+    return baseX;
+  }
 
   const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
   const canvas = requireElement('preview');
@@ -79,15 +121,23 @@
    * Faz a quebra manual de texto respeitando o limite de largura do canvas.
    * Retorna a coordenada Y da próxima linha disponível.
    */
-  function wrapText(ctxInstance, text, x, y, maxWidth, lineHeight, maxLines = 3) {
-    const words = (text || '').split(/\s+/);
+  function wrapText(ctxInstance, rawText, x, y, maxWidth, lineHeight, maxLines = 3, textAlign = 'left') {
+    const text = (rawText || '').trim();
+    if (!text) {
+      return y;
+    }
+
+    const words = text.split(/\s+/);
     let line = '';
     let lines = 0;
+    const previousAlign = ctxInstance.textAlign;
+    ctxInstance.textAlign = textAlign;
+
     for (let n = 0; n < words.length; n += 1) {
-      const testLine = line + words[n] + ' ';
+      const testLine = `${line}${words[n]} `;
       if (ctxInstance.measureText(testLine).width > maxWidth && n > 0) {
         ctxInstance.fillText(line.trim(), x, y);
-        line = words[n] + ' ';
+        line = `${words[n]} `;
         y += lineHeight;
         lines += 1;
         if (lines >= maxLines - 1) break;
@@ -95,7 +145,9 @@
         line = testLine;
       }
     }
+
     ctxInstance.fillText(line.trim(), x, y);
+    ctxInstance.textAlign = previousAlign;
     return y + lineHeight;
   }
 
@@ -539,53 +591,98 @@
     const nome = (inpNome.value || '').trim() || 'Seu Nome Aqui';
     const cargoValue = (inpCargo.value || '').trim();
     const empresaValue = (inpEmpresa.value || '').trim();
-    const cargoEmpresaParts = [];
-    if (cargoValue) cargoEmpresaParts.push(cargoValue);
-    if (empresaValue) cargoEmpresaParts.push(empresaValue);
-    const hasCargoEmpresa = cargoEmpresaParts.length > 0;
-    const cargoEmpresa = hasCargoEmpresa
-      ? cargoEmpresaParts.join(' - ')
-      : 'Cargo - Empresa';
-    const titulo = (inpTitulo.value || '').trim() || 'Título da Atividade';
-    const info = [
-      (inpData.value || '').trim(),
-      (inpHorario.value || '').trim()
-    ].filter(Boolean).join(' • ');
+    const hasCargo = Boolean(cargoValue);
+    const hasEmpresa = Boolean(empresaValue);
+    const tituloValue = (inpTitulo.value || '').trim();
+    const diaValue = (inpData.value || '').trim();
+    const horarioValue = (inpHorario.value || '').trim();
     const socialHandle = (inpSocial.value || '').trim();
 
-    let y = textStartY;
+    const talkTitle = tituloValue
+      ? `“${tituloValue}”`
+      : '“Título da Atividade”';
 
-    const nomeSize = fontSizes.name;
-    setFont(800, nomeSize);
-    y = wrapText(ctx, nome, textX, y, textW, lh(nomeSize), 4);
-    y = addTextGap(y);
+    const textEntries = [
+      { key: 'name', text: nome, weight: 800, maxLines: 4 }
+    ];
 
-    if (hasCargoEmpresa || (!cargoValue && !empresaValue)) {
-      const size = fontSizes.role;
-      setFont(600, size);
-      y = wrapText(ctx, cargoEmpresa, textX, y, textW, lh(size), 4);
-      y = addTextGap(y);
+    if (hasCargo || (!hasCargo && !hasEmpresa)) {
+      textEntries.push({
+        key: 'cargo',
+        text: hasCargo ? cargoValue : 'Cargo',
+        weight: 600,
+        maxLines: 4
+      });
     }
 
-    if (titulo) {
-      const size = fontSizes.talkTitle;
-      setFont(700, size);
-      y = wrapText(ctx, `“${titulo}”`, textX, y, textW, lh(size), 6);
-      y = addTextGap(y);
+    if (hasEmpresa || (!hasCargo && !hasEmpresa)) {
+      textEntries.push({
+        key: 'empresa',
+        text: hasEmpresa ? empresaValue : 'Empresa',
+        weight: 600,
+        maxLines: 4
+      });
     }
 
-    if (info) {
-      const size = fontSizes.info;
-      setFont(600, size);
-      y = wrapText(ctx, info, textX, y, textW, lh(size), 1);
-      y = addTextGap(y);
+    textEntries.push({
+      key: 'palestra',
+      text: talkTitle,
+      weight: 700,
+      maxLines: 6
+    });
+
+    if (diaValue) {
+      textEntries.push({
+        key: 'dia',
+        text: diaValue,
+        weight: 600,
+        maxLines: 2
+      });
+    }
+
+    if (horarioValue) {
+      textEntries.push({
+        key: 'horario',
+        text: horarioValue,
+        weight: 600,
+        maxLines: 2
+      });
     }
 
     if (socialHandle) {
-      const size = fontSizes.social;
-      y += Math.round(16 * dpr);
-      setFont(600, size);
-      y = wrapText(ctx, socialHandle, textX, y, textW, lh(size), 2);
+      textEntries.push({
+        key: 'social',
+        text: socialHandle,
+        weight: 600,
+        maxLines: 2,
+        extraTop: Math.round(16 * dpr)
+      });
+    }
+
+    let y = textStartY;
+
+    for (const entry of textEntries) {
+      const text = (entry.text || '').trim();
+      if (!text) continue;
+
+      if (entry.extraTop) {
+        y += entry.extraTop;
+      }
+
+      const style = resolveTextStyle(entry.key);
+      setFont(entry.weight, style.size);
+      ctx.fillStyle = style.color;
+      const anchorX = alignedX(textX, textW, style.align);
+      y = wrapText(
+        ctx,
+        text,
+        anchorX,
+        y,
+        textW,
+        lh(style.size),
+        entry.maxLines ?? 3,
+        style.align
+      );
       y = addTextGap(y);
     }
 

@@ -26,12 +26,14 @@ window.THEME = {
 
   typography: {
     family: 'InterVar, system-ui, sans-serif',
-    sizes: {
-      name: 66,
-      role: 30,
-      talkTitle: 44,
-      info: 30,
-      social: 30
+    textStyles: {
+      name: { size: 66, color: '#FFFFFF', align: 'left' },
+      cargo: { size: 30, color: '#F9A826', align: 'left' },
+      empresa: { size: 30, color: '#F2D024', align: 'left' },
+      palestra: { size: 44, color: '#FFFFFF', align: 'left' },
+      dia: { size: 30, color: '#F9A826', align: 'left' },
+      horario: { size: 30, color: '#F9A826', align: 'left' },
+      social: { size: 30, color: '#FFFFFF', align: 'left' }
     }
   }
 };
