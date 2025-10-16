@@ -232,6 +232,24 @@
     return tempCanvas;
   }
 
+  function clipRoundedRectPath(ctxInstance, x, y, size, radius) {
+    const safeRadius = Math.max(0, Math.min(radius, size / 2));
+    if (safeRadius === 0) {
+      ctxInstance.beginPath();
+      ctxInstance.rect(x, y, size, size);
+      ctxInstance.closePath();
+      return;
+    }
+
+    ctxInstance.beginPath();
+    ctxInstance.moveTo(x + safeRadius, y);
+    ctxInstance.arcTo(x + size, y, x + size, y + size, safeRadius);
+    ctxInstance.arcTo(x + size, y + size, x, y + size, safeRadius);
+    ctxInstance.arcTo(x, y + size, x, y, safeRadius);
+    ctxInstance.arcTo(x, y, x + size, y, safeRadius);
+    ctxInstance.closePath();
+  }
+
   /**
    * Carrega imagens garantindo suporte a CORS quando necessário.
    * Retorna uma instância de Image pronta para uso no canvas.
@@ -496,12 +514,19 @@
     const photoSize = photoLayout.size != null
       ? Math.round(photoLayout.size * dpr)
       : Math.round(W * 0.34);
+    const photoShape = photoLayout.shape === 'circle' ? 'circle' : 'square';
     const photoX = photoLayout.x != null
       ? Math.round(photoLayout.x * dpr)
       : W - pad - photoSize;
     const photoY = photoLayout.y != null
       ? Math.round(photoLayout.y * dpr)
       : Math.round(H * 0.24);
+    const photoMargin = photoLayout.margin != null
+      ? Math.max(0, Math.round(photoLayout.margin * dpr))
+      : Math.round(22 * dpr);
+    const photoRadius = photoLayout.borderRadius != null
+      ? Math.max(0, Math.round(photoLayout.borderRadius * dpr))
+      : Math.round(24 * dpr);
 
     const textX = textLayout.x != null ? Math.round(textLayout.x * dpr) : pad;
     const textStartY = textLayout.y != null
@@ -568,22 +593,37 @@
       const cropped = cropper.getCroppedCanvas({ imageSmoothingQuality: 'high' });
       if (cropped) {
         const filteredCanvas = drawSquareWithFilters(cropped, photoSize, cssFilters());
-        const margin = Math.round(22 * dpr);
         ctx.save();
         ctx.globalAlpha = 0.9;
         ctx.fillStyle = 'rgba(0,0,0,0.30)';
-        ctx.fillRect(photoX - margin / 2, photoY - margin / 2, photoSize + margin, photoSize + margin);
+        if (photoShape === 'circle') {
+          const centerX = photoX + photoSize / 2;
+          const centerY = photoY + photoSize / 2;
+          const haloRadius = photoSize / 2 + photoMargin / 2;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, haloRadius, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(
+            photoX - photoMargin / 2,
+            photoY - photoMargin / 2,
+            photoSize + photoMargin,
+            photoSize + photoMargin
+          );
+        }
         ctx.restore();
 
-        const radius = Math.round(24 * dpr);
         ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(photoX + radius, photoY);
-        ctx.arcTo(photoX + photoSize, photoY, photoX + photoSize, photoY + photoSize, radius);
-        ctx.arcTo(photoX + photoSize, photoY + photoSize, photoX, photoY + photoSize, radius);
-        ctx.arcTo(photoX, photoY + photoSize, photoX, photoY, radius);
-        ctx.arcTo(photoX, photoY, photoX + photoSize, photoY, radius);
-        ctx.closePath();
+        if (photoShape === 'circle') {
+          const centerX = photoX + photoSize / 2;
+          const centerY = photoY + photoSize / 2;
+          const radius = photoSize / 2;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.closePath();
+        } else {
+          clipRoundedRectPath(ctx, photoX, photoY, photoSize, photoRadius);
+        }
         ctx.clip();
         ctx.drawImage(filteredCanvas, photoX, photoY, photoSize, photoSize);
         ctx.restore();
