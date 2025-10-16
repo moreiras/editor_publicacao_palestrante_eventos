@@ -15,40 +15,87 @@
     return element;
   }
 
-  const { THEME, TEXT_TEMPLATE } = window;
-  if (!THEME || !TEXT_TEMPLATE) {
-    throw new Error('Tema ou template de texto não definidos. Verifique theme.js.');
+  const { EVENT_THEMES, TEXT_TEMPLATE } = window;
+
+  const validThemes = Array.isArray(EVENT_THEMES)
+    ? EVENT_THEMES.filter((theme) => theme && typeof theme === 'object')
+    : [];
+
+  if (!validThemes.length) {
+    throw new Error('Nenhum tema de evento definido. Verifique theme.js.');
   }
 
-  const layout = THEME.layout || {};
-  const photoLayout = layout.photo || {};
-  const textLayout = layout.text || {};
-  const typography = THEME.typography || {};
-  const fontFamily = typography.family || 'InterVar, system-ui, sans-serif';
-  const legacySizes = typography.sizes || {};
-  const textStylesConfig = typography.textStyles || {};
-  const fallbackTextColor = THEME.textOnDark || '#000000';
+  if (!TEXT_TEMPLATE) {
+    throw new Error('Template de texto não definido. Verifique theme.js.');
+  }
+
+  const normalizedThemes = validThemes.map((theme, index) => {
+    const idCandidate = typeof theme.id === 'string' && theme.id.trim()
+      ? theme.id.trim()
+      : `theme-${index + 1}`;
+    return { ...theme, id: idCandidate };
+  });
+
+  const themesById = new Map(normalizedThemes.map((theme) => [theme.id, theme]));
+
+  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
+
+  let THEME = normalizedThemes[0];
+  let layout = {};
+  let photoLayout = {};
+  let textLayout = {};
+  let typography = {};
+  let fontFamily = 'InterVar, system-ui, sans-serif';
+  let legacySizes = {};
+  let textStylesConfig = {};
+  let fallbackTextColor = '#000000';
+  let lineSpacing = 0;
+
+  const blockedBgUrls = new Set();
+  let cachedBgUrl = null;
+  let cachedBgImage = null;
+
+  function applyThemeState(theme) {
+    THEME = theme;
+    layout = THEME.layout || {};
+    photoLayout = layout.photo || {};
+    textLayout = layout.text || {};
+    typography = THEME.typography || {};
+    fontFamily = typography.family || 'InterVar, system-ui, sans-serif';
+    legacySizes = typography.sizes || {};
+    textStylesConfig = typography.textStyles || {};
+    fallbackTextColor = THEME.textOnDark || '#000000';
+    lineSpacing = textLayout.linespace != null
+      ? Math.round(textLayout.linespace * dpr)
+      : 0;
+    cachedBgUrl = null;
+    cachedBgImage = null;
+    if (THEME.bgUrl) {
+      blockedBgUrls.delete(THEME.bgUrl);
+    }
+  }
+
+  applyThemeState(THEME);
 
   function resolveLegacySize(key, fallback) {
     const value = Number.parseFloat(legacySizes[key]);
     return Number.isFinite(value) ? value : fallback;
   }
 
-  const defaultTextStyles = {
-    name: { size: resolveLegacySize('name', 58), color: fallbackTextColor, align: 'left' },
-    cargo: { size: resolveLegacySize('role', 30), color: fallbackTextColor, align: 'left' },
-    empresa: { size: resolveLegacySize('role', 30), color: fallbackTextColor, align: 'left' },
-    palestra: { size: resolveLegacySize('talkTitle', 32), color: fallbackTextColor, align: 'left' },
-    dia: { size: resolveLegacySize('info', 26), color: fallbackTextColor, align: 'left' },
-    horario: { size: resolveLegacySize('info', 26), color: fallbackTextColor, align: 'left' },
-    social: {
-      size: resolveLegacySize('social', resolveLegacySize('info', 24)),
-      color: fallbackTextColor,
-      align: 'left'
-    }
-  };
-
   function resolveTextStyle(key) {
+    const defaultTextStyles = {
+      name: { size: resolveLegacySize('name', 58), color: fallbackTextColor, align: 'left' },
+      cargo: { size: resolveLegacySize('role', 30), color: fallbackTextColor, align: 'left' },
+      empresa: { size: resolveLegacySize('role', 30), color: fallbackTextColor, align: 'left' },
+      palestra: { size: resolveLegacySize('talkTitle', 32), color: fallbackTextColor, align: 'left' },
+      dia: { size: resolveLegacySize('info', 26), color: fallbackTextColor, align: 'left' },
+      horario: { size: resolveLegacySize('info', 26), color: fallbackTextColor, align: 'left' },
+      social: {
+        size: resolveLegacySize('social', resolveLegacySize('info', 24)),
+        color: fallbackTextColor,
+        align: 'left'
+      }
+    };
     const defaults = defaultTextStyles[key] || { size: 24, color: fallbackTextColor, align: 'left' };
     const style = textStylesConfig[key] || {};
 
@@ -75,13 +122,13 @@
     return baseX;
   }
 
-  const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
   const canvas = requireElement('preview');
   const ctx = canvas.getContext('2d');
   if (!ctx) {
     throw new Error('Contexto 2D não disponível. O navegador é incompatível com canvas.');
   }
 
+  const selEvento = requireElement('selEvento');
   const inpNome = requireElement('inpNome');
   const inpCargo = requireElement('inpCargo');
   const inpEmpresa = requireElement('inpEmpresa');
@@ -106,6 +153,19 @@
   const btnShare = requireElement('btnShare');
 
   const outTexto = requireElement('outTexto');
+
+  normalizedThemes.forEach((theme) => {
+    const option = document.createElement('option');
+    option.value = theme.id;
+    option.textContent = theme.shortName || theme.label || theme.name;
+    selEvento.appendChild(option);
+  });
+
+  if (selEvento.value && themesById.has(selEvento.value)) {
+    applyThemeState(themesById.get(selEvento.value));
+  } else {
+    selEvento.value = THEME.id;
+  }
 
   let cropper = null;
 
@@ -150,10 +210,6 @@
     ctxInstance.textAlign = previousAlign;
     return y + lineHeight;
   }
-
-  const lineSpacing = textLayout.linespace != null
-    ? Math.round(textLayout.linespace * dpr)
-    : 0;
 
   const lh = (px) => Math.round(px * 1.35 * dpr);
 
@@ -470,12 +526,6 @@
   function getFormatPx() {
     return { w: 1080, h: 1350 };
   }
-
-  let cachedBgUrl = null;
-  let cachedBgImage = null;
-
-  const blockedBgUrls = new Set();
-
   /**
    * Busca e cacheia a imagem de fundo definida no tema, bloqueando URLs
    * problemáticas para evitar repetição de erros.
@@ -753,6 +803,20 @@
   }
 
   const requestRedraw = throttle(redraw, 33);
+
+  selEvento.addEventListener('change', () => {
+    const nextTheme = themesById.get(selEvento.value);
+    if (!nextTheme) {
+      selEvento.value = THEME.id;
+      return;
+    }
+    if (nextTheme.id === THEME.id) {
+      return;
+    }
+    applyThemeState(nextTheme);
+    atualizarTexto();
+    requestRedraw();
+  });
 
   let currentObjectUrl = null;
 
