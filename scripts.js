@@ -50,6 +50,7 @@
   let textStylesConfig = {};
   let fallbackTextColor = '#000000';
   let lineSpacing = 0;
+  let textBlockAlign = 'left';
 
   const blockedBgUrls = new Set();
   let cachedBgUrl = null;
@@ -68,6 +69,12 @@
     lineSpacing = textLayout.linespace != null
       ? Math.round(textLayout.linespace * dpr)
       : 0;
+    const alignCandidate = typeof textLayout.align === 'string'
+      ? textLayout.align.trim().toLowerCase()
+      : 'left';
+    textBlockAlign = alignCandidate === 'center' || alignCandidate === 'right'
+      ? alignCandidate
+      : 'left';
     cachedBgUrl = null;
     cachedBgImage = null;
     if (THEME.bgUrl) {
@@ -84,19 +91,18 @@
 
   function resolveTextStyle(key) {
     const defaultTextStyles = {
-      name: { size: resolveLegacySize('name', 58), color: fallbackTextColor, align: 'left' },
-      cargo: { size: resolveLegacySize('role', 30), color: fallbackTextColor, align: 'left' },
-      empresa: { size: resolveLegacySize('role', 30), color: fallbackTextColor, align: 'left' },
-      palestra: { size: resolveLegacySize('talkTitle', 32), color: fallbackTextColor, align: 'left' },
-      dia: { size: resolveLegacySize('info', 26), color: fallbackTextColor, align: 'left' },
-      horario: { size: resolveLegacySize('info', 26), color: fallbackTextColor, align: 'left' },
+      name: { size: resolveLegacySize('name', 58), color: fallbackTextColor },
+      cargo: { size: resolveLegacySize('role', 30), color: fallbackTextColor },
+      empresa: { size: resolveLegacySize('role', 30), color: fallbackTextColor },
+      palestra: { size: resolveLegacySize('talkTitle', 32), color: fallbackTextColor },
+      dia: { size: resolveLegacySize('info', 26), color: fallbackTextColor },
+      horario: { size: resolveLegacySize('info', 26), color: fallbackTextColor },
       social: {
         size: resolveLegacySize('social', resolveLegacySize('info', 24)),
-        color: fallbackTextColor,
-        align: 'left'
+        color: fallbackTextColor
       }
     };
-    const defaults = defaultTextStyles[key] || { size: 24, color: fallbackTextColor, align: 'left' };
+    const defaults = defaultTextStyles[key] || { size: 24, color: fallbackTextColor };
     const style = textStylesConfig[key] || {};
 
     const candidateSize = Number.parseFloat(style.size);
@@ -106,14 +112,7 @@
       ? style.color
       : defaults.color;
 
-    const alignCandidate = typeof style.align === 'string'
-      ? style.align.trim().toLowerCase()
-      : defaults.align;
-    const align = alignCandidate === 'center' || alignCandidate === 'right'
-      ? alignCandidate
-      : 'left';
-
-    return { size, color, align };
+    return { size, color };
   }
 
   function alignedX(baseX, width, align) {
@@ -652,89 +651,140 @@
       ? `“${tituloValue}”`
       : '“Título da Atividade”';
 
-    const textEntries = [
-      { key: 'name', text: nome, weight: 800, maxLines: 4 }
-    ];
-
-    if (hasCargo || (!hasCargo && !hasEmpresa)) {
-      textEntries.push({
-        key: 'cargo',
-        text: hasCargo ? cargoValue : 'Cargo',
-        weight: 600,
-        maxLines: 4
-      });
-    }
-
-    if (hasEmpresa || (!hasCargo && !hasEmpresa)) {
-      textEntries.push({
-        key: 'empresa',
-        text: hasEmpresa ? empresaValue : 'Empresa',
-        weight: 600,
-        maxLines: 4
-      });
-    }
-
-    textEntries.push({
-      key: 'palestra',
-      text: talkTitle,
-      weight: 700,
-      maxLines: 6
-    });
-
-    if (diaValue) {
-      textEntries.push({
-        key: 'dia',
-        text: diaValue,
-        weight: 600,
-        maxLines: 2
-      });
-    }
-
-    if (horarioValue) {
-      textEntries.push({
-        key: 'horario',
-        text: horarioValue,
-        weight: 600,
-        maxLines: 2
-      });
-    }
-
-    if (socialHandle) {
-      textEntries.push({
-        key: 'social',
-        text: socialHandle,
-        weight: 600,
-        maxLines: 2,
-        extraTop: Math.round(16 * dpr)
-      });
-    }
-
     let y = textStartY;
 
-    for (const entry of textEntries) {
-      const text = (entry.text || '').trim();
-      if (!text) continue;
-
-      if (entry.extraTop) {
-        y += entry.extraTop;
+    function drawWrappedEntry(key, text, weight, maxLines, extraTop = 0) {
+      const content = (text || '').trim();
+      if (!content) {
+        return;
       }
 
-      const style = resolveTextStyle(entry.key);
-      setFont(entry.weight, style.size);
+      if (extraTop) {
+        y += extraTop;
+      }
+
+      const style = resolveTextStyle(key);
+      setFont(weight, style.size);
       ctx.fillStyle = style.color;
-      const anchorX = alignedX(textX, textW, style.align);
+      const anchorX = alignedX(textX, textW, textBlockAlign);
       y = wrapText(
         ctx,
-        text,
+        content,
         anchorX,
         y,
         textW,
         lh(style.size),
-        entry.maxLines ?? 3,
-        style.align
+        maxLines,
+        textBlockAlign
       );
       y = addTextGap(y);
     }
+
+    function drawSegmentsLine(segments) {
+      const activeSegments = segments.filter((segment) => {
+        return segment && (segment.text || '').trim();
+      }).map((segment) => ({
+        ...segment,
+        text: segment.keepSpacing ? segment.text : segment.text.trim()
+      }));
+
+      if (!activeSegments.length) {
+        return;
+      }
+
+      const measurements = activeSegments.map((segment) => {
+        setFont(segment.weight, segment.style.size);
+        const width = ctx.measureText(segment.text).width;
+        return { segment, width };
+      });
+
+      const totalWidth = measurements.reduce((acc, item) => acc + item.width, 0);
+      const anchorX = alignedX(textX, textW, textBlockAlign);
+      let startX = anchorX;
+      if (textBlockAlign === 'center') {
+        startX -= totalWidth / 2;
+      } else if (textBlockAlign === 'right') {
+        startX -= totalWidth;
+      }
+
+      const previousAlign = ctx.textAlign;
+      ctx.textAlign = 'left';
+
+      let cursorX = startX;
+      let maxSize = 0;
+
+      for (const { segment, width } of measurements) {
+        setFont(segment.weight, segment.style.size);
+        ctx.fillStyle = segment.color || segment.style.color;
+        ctx.fillText(segment.text, cursorX, y);
+        cursorX += width;
+        if (segment.style.size > maxSize) {
+          maxSize = segment.style.size;
+        }
+      }
+
+      ctx.textAlign = previousAlign;
+      y = addTextGap(y + lh(maxSize));
+    }
+
+    drawWrappedEntry('name', nome, 800, 4);
+
+    const cargoText = hasCargo ? cargoValue : (!hasEmpresa ? 'Cargo' : '');
+    const empresaText = hasEmpresa ? empresaValue : (!hasCargo ? 'Empresa' : '');
+    const cargoStyle = resolveTextStyle('cargo');
+    const empresaStyle = resolveTextStyle('empresa');
+    const nameStyle = resolveTextStyle('name');
+
+    if (cargoText || empresaText) {
+      const segments = [];
+      if (cargoText) {
+        segments.push({ text: cargoText, style: cargoStyle, weight: 600 });
+      }
+      if (cargoText && empresaText) {
+        segments.push({
+          text: ' • ',
+          style: { size: Math.max(cargoStyle.size, empresaStyle.size), color: nameStyle.color },
+          weight: 600,
+          color: nameStyle.color,
+          keepSpacing: true
+        });
+      }
+      if (empresaText) {
+        segments.push({ text: empresaText, style: empresaStyle, weight: 600 });
+      }
+      drawSegmentsLine(segments);
+    }
+
+    drawWrappedEntry('palestra', talkTitle, 700, 6);
+
+    const diaStyle = resolveTextStyle('dia');
+    const horarioStyle = resolveTextStyle('horario');
+    if (diaValue || horarioValue) {
+      const segments = [];
+      if (diaValue) {
+        segments.push({ text: diaValue, style: diaStyle, weight: 600 });
+      }
+      if (diaValue && horarioValue) {
+        segments.push({
+          text: ' • ',
+          style: { size: Math.max(diaStyle.size, horarioStyle.size), color: nameStyle.color },
+          weight: 600,
+          color: nameStyle.color,
+          keepSpacing: true
+        });
+      }
+      if (horarioValue) {
+        segments.push({ text: horarioValue, style: horarioStyle, weight: 600 });
+      }
+      drawSegmentsLine(segments);
+    }
+
+    if (socialHandle) {
+      drawWrappedEntry('social', socialHandle, 600, 2, Math.round(16 * dpr));
+    }
+
+    // Reseta alinhamento para evitar efeitos colaterais em outros desenhos.
+    ctx.textAlign = textBlockAlign;
 
     if (cropper) {
       const cropped = cropper.getCroppedCanvas({ imageSmoothingQuality: 'high' });

@@ -18,19 +18,20 @@ window.EVENT_THEMES = [
         x: 60,
         y: 600,
         width: 960,
-        linespace: 18
+        linespace: 18,
+        align: 'left'
       }
     },
     typography: {
       family: 'InterVar, system-ui, sans-serif',
       textStyles: {
-        name: { size: 66, color: '#FFFFFF', align: 'left' },
-        cargo: { size: 30, color: '#F9A826', align: 'left' },
-        empresa: { size: 30, color: '#F2D024', align: 'left' },
-        palestra: { size: 44, color: '#FFFFFF', align: 'left' },
-        dia: { size: 30, color: '#F9A826', align: 'left' },
-        horario: { size: 30, color: '#F9A826', align: 'left' },
-        social: { size: 30, color: '#FFFFFF', align: 'left' }
+        name: { size: 66, color: '#FFFFFF' },
+        cargo: { size: 30, color: '#F9A826' },
+        empresa: { size: 30, color: '#F2D024' },
+        palestra: { size: 44, color: '#FFFFFF' },
+        dia: { size: 30, color: '#F9A826' },
+        horario: { size: 30, color: '#F9A826' },
+        social: { size: 30, color: '#FFFFFF' }
       }
     }
   },
@@ -55,19 +56,20 @@ window.EVENT_THEMES = [
         x: 80,
         y: 220,
         width: 460,
-        linespace: 24
+        linespace: 24,
+        align: 'left'
       }
     },
     typography: {
       family: 'InterVar, system-ui, sans-serif',
       textStyles: {
-        name: { size: 62, color: '#FDF2F8', align: 'left' },
-        cargo: { size: 30, color: '#F4A259', align: 'left' },
-        empresa: { size: 30, color: '#FDCB82', align: 'left' },
-        palestra: { size: 40, color: '#FFFFFF', align: 'left' },
-        dia: { size: 30, color: '#F4A259', align: 'left' },
-        horario: { size: 30, color: '#F4A259', align: 'left' },
-        social: { size: 28, color: '#FFFFFF', align: 'left' }
+        name: { size: 62, color: '#FDF2F8' },
+        cargo: { size: 30, color: '#F4A259' },
+        empresa: { size: 30, color: '#FDCB82' },
+        palestra: { size: 40, color: '#FFFFFF' },
+        dia: { size: 30, color: '#F4A259' },
+        horario: { size: 30, color: '#F4A259' },
+        social: { size: 28, color: '#FFFFFF' }
       }
     }
   },
@@ -91,19 +93,20 @@ window.EVENT_THEMES = [
         x: 520,
         y: 220,
         width: 480,
-        linespace: 22
+        linespace: 22,
+        align: 'left'
       }
     },
     typography: {
       family: 'InterVar, system-ui, sans-serif',
       textStyles: {
-        name: { size: 64, color: '#FFFFFF', align: 'left' },
-        cargo: { size: 32, color: '#7DD3FC', align: 'left' },
-        empresa: { size: 32, color: '#38BDF8', align: 'left' },
-        palestra: { size: 42, color: '#FFFFFF', align: 'left' },
-        dia: { size: 32, color: '#7DD3FC', align: 'left' },
-        horario: { size: 32, color: '#7DD3FC', align: 'left' },
-        social: { size: 30, color: '#E0F2FE', align: 'left' }
+        name: { size: 64, color: '#FFFFFF' },
+        cargo: { size: 32, color: '#7DD3FC' },
+        empresa: { size: 32, color: '#38BDF8' },
+        palestra: { size: 42, color: '#FFFFFF' },
+        dia: { size: 32, color: '#7DD3FC' },
+        horario: { size: 32, color: '#7DD3FC' },
+        social: { size: 30, color: '#E0F2FE' }
       }
     }
   }
