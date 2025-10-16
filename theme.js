@@ -4,22 +4,22 @@ window.THEME = {
   hashtags: '#semanainfrabr #nicbr #ixforum #internet #ixps #internetexchangepoints',
 
   // Referências visuais opcionais
-  bgUrl: './template-teste-ixforum.png', // imagem de fundo em alta resolução
+  bgUrl: './instagram post - 1.png', // imagem de fundo em alta resolução
   textOnDark: '#FFFFFF',
   overlayOpacity: 0,
 
   // Layout para formatação final em 1080 x 1350 (proporção 4:5)
   layout: {
     photo: {
-      x: 540, // posição X da foto (px)
-      y: 600, // posição Y da foto (px)
-      size: 490 // tamanho do lado da foto (px)
+      x: 60, // posição X da foto (px)
+      y: 140, // posição Y da foto (px)
+      size: 363 // tamanho do lado da foto (px)
     },
     text: {
-      x: 30, // posição X inicial dos textos (px)
+      x: 60, // posição X inicial dos textos (px)
       y: 600, // posição Y inicial (px)
-      width: 490, // largura máxima do bloco de texto (px)
-      linespace: 15 // espaço extra entre os blocos de texto (px)
+      width: 960, // largura máxima do bloco de texto (px)
+      linespace: 18 // espaço extra entre os blocos de texto (px)
     }
   },
 
