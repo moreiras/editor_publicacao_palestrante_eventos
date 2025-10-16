@@ -40,17 +40,82 @@
 
   const dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
 
+  const DEFAULT_FONT_STACK = 'InterVar, system-ui, sans-serif';
   let THEME = normalizedThemes[0];
   let layout = {};
   let photoLayout = {};
   let textLayout = {};
   let typography = {};
-  let fontFamily = 'InterVar, system-ui, sans-serif';
+  let fontFamily = DEFAULT_FONT_STACK;
+  let lastFontLoadPromise = Promise.resolve();
   let legacySizes = {};
   let textStylesConfig = {};
   let fallbackTextColor = '#000000';
   let lineSpacing = 0;
   let textBlockAlign = 'left';
+
+  const fontLoadCache = new Map();
+  const FONT_WEIGHTS_TO_PRELOAD = [400, 600, 700, 800];
+  const GENERIC_FONT_NAMES = new Set([
+    'serif',
+    'sans-serif',
+    'monospace',
+    'cursive',
+    'fantasy',
+    'system-ui',
+    'ui-serif',
+    'ui-sans-serif',
+    'ui-monospace',
+    'math',
+    'emoji',
+    'fangsong'
+  ]);
+
+  function stripQuotes(value) {
+    if (typeof value !== 'string') {
+      return '';
+    }
+    return value.replace(/^['"]+|['"]+$/g, '').trim();
+  }
+
+  function extractPrimaryFontName(family) {
+    if (!family) {
+      return '';
+    }
+    const families = family.split(',').map((part) => stripQuotes(part));
+    return families.find((name) => name && !GENERIC_FONT_NAMES.has(name.toLowerCase())) || '';
+  }
+
+  function ensureFontLoadedForFamily(family) {
+    if (!family || !document.fonts || typeof document.fonts.load !== 'function') {
+      return Promise.resolve();
+    }
+
+    const primaryFont = extractPrimaryFontName(family);
+    if (!primaryFont) {
+      return Promise.resolve();
+    }
+
+    if (!fontLoadCache.has(primaryFont)) {
+      const promises = FONT_WEIGHTS_TO_PRELOAD.map((weight) => {
+        const descriptor = `${weight} 48px "${primaryFont}"`;
+        try {
+          return document.fonts.load(descriptor).catch((error) => {
+            console.warn(`Não foi possível carregar a variação ${descriptor} da fonte ${primaryFont}.`, error);
+            return null;
+          });
+        } catch (error) {
+          console.warn(`Falha ao enfileirar o carregamento da fonte ${primaryFont}.`, error);
+          return Promise.resolve(null);
+        }
+      });
+
+      const loadPromise = Promise.all(promises).then(() => undefined);
+      fontLoadCache.set(primaryFont, loadPromise);
+    }
+
+    return fontLoadCache.get(primaryFont);
+  }
 
   const blockedBgUrls = new Set();
   let cachedBgUrl = null;
@@ -62,7 +127,8 @@
     photoLayout = layout.photo || {};
     textLayout = layout.text || {};
     typography = THEME.typography || {};
-    fontFamily = typography.family || 'InterVar, system-ui, sans-serif';
+    fontFamily = typography.family || DEFAULT_FONT_STACK;
+    lastFontLoadPromise = ensureFontLoadedForFamily(fontFamily);
     legacySizes = typography.sizes || {};
     textStylesConfig = typography.textStyles || {};
     fallbackTextColor = THEME.textOnDark || '#000000';
@@ -80,6 +146,7 @@
     if (THEME.bgUrl) {
       blockedBgUrls.delete(THEME.bgUrl);
     }
+    return lastFontLoadPromise;
   }
 
   applyThemeState(THEME);
@@ -854,6 +921,8 @@
 
   const requestRedraw = throttle(redraw, 33);
 
+  lastFontLoadPromise.then(() => requestRedraw());
+
   selEvento.addEventListener('change', () => {
     const nextTheme = themesById.get(selEvento.value);
     if (!nextTheme) {
@@ -866,6 +935,7 @@
     applyThemeState(nextTheme);
     atualizarTexto();
     requestRedraw();
+    lastFontLoadPromise.then(() => requestRedraw());
   });
 
   let currentObjectUrl = null;
