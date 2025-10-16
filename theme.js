@@ -13,7 +13,8 @@ window.THEME = {
     photo: {
       x: 60, // posição X da foto (px)
       y: 140, // posição Y da foto (px)
-      size: 363 // tamanho do lado da foto (px)
+      size: 363, // tamanho do lado da foto (px)
+      shape: 'square' // use 'circle' para recorte circular
     },
     text: {
       x: 60, // posição X inicial dos textos (px)
