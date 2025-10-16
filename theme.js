@@ -1,10 +1,10 @@
 window.EVENT_THEMES = [
-  {
-    id: 'forum-bcop',
-    name: 'Fórum BCOP 2025',
-    site: 'https://forumbcop.nic.br',
-    hashtags: '#semanainfrabr #nicbr #cgibr #forumbcop #internet #bcop #icann #dns #segurança',
-    bgUrl: './templates/forum-bcop.png',
+   {
+    id: 'gter-gts-2024',
+    name: 'GTER 54 GTS 40',
+    site: 'https://gtergts.nic.br/',
+    hashtags: '#gter #engenharia #redes #gts #seguranca #comunidade #semanainfra #nicbr #cgibr #internet',
+    bgUrl: './templates/gter-54-gts-40.png',
     textOnDark: '#FFFFFF',
     overlayOpacity: 0,
     layout: {
@@ -25,12 +25,12 @@ window.EVENT_THEMES = [
     typography: {
       family: 'Elza, system-ui, sans-serif',
       textStyles: {
-        name: { size: 60, color: '#113758' },
+        name: { size: 60, color: '#fee08b' },
         cargo: { size: 40, color: '#ffffff' },
-        empresa: { size: 40, color: '#113758' },
+        empresa: { size: 40, color: '#fee08b' },
         palestra: { size: 50, color: '#FFFFFF' },
-        dia: { size: 40, color: '#113758' },
-        horario: { size: 40, color: '#113758' },
+        dia: { size: 40, color: '#fee08b' },
+        horario: { size: 40, color: '#fee08b' },
         social: { size: 30, color: '#FFFFFF' }
       }
     }
@@ -71,12 +71,12 @@ window.EVENT_THEMES = [
       }
     }
   },
-  {
-    id: 'gter-gts-2024',
-    name: 'GTER 54 GTS 40',
-    site: 'https://gtergts.nic.br/',
-    hashtags: '#gter #engenharia #redes #gts #seguranca #comunidade #semanainfra #nicbr #cgibr #internet',
-    bgUrl: './templates/gter-54-gts-40.png',
+    {
+    id: 'forum-bcop',
+    name: 'Fórum BCOP 2025',
+    site: 'https://forumbcop.nic.br',
+    hashtags: '#semanainfrabr #nicbr #cgibr #forumbcop #internet #bcop #icann #dns #segurança',
+    bgUrl: './templates/forum-bcop.png',
     textOnDark: '#FFFFFF',
     overlayOpacity: 0,
     layout: {
@@ -97,12 +97,12 @@ window.EVENT_THEMES = [
     typography: {
       family: 'Elza, system-ui, sans-serif',
       textStyles: {
-        name: { size: 60, color: '#fee08b' },
+        name: { size: 60, color: '#113758' },
         cargo: { size: 40, color: '#ffffff' },
-        empresa: { size: 40, color: '#fee08b' },
+        empresa: { size: 40, color: '#113758' },
         palestra: { size: 50, color: '#FFFFFF' },
-        dia: { size: 40, color: '#fee08b' },
-        horario: { size: 40, color: '#fee08b' },
+        dia: { size: 40, color: '#113758' },
+        horario: { size: 40, color: '#113758' },
         social: { size: 30, color: '#FFFFFF' }
       }
     }
